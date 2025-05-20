@@ -11,6 +11,7 @@ import ARKit
 class ARViewModel: NSObject, ARSessionDelegate, ObservableObject {
     private var latestDepthMap: CVPixelBuffer?
     private var latestImage: CVPixelBuffer?
+    private var latestCameraIntrinsics: simd_float3x3?
     @Published var lastCapture: UIImage? = nil {
         didSet {
             print("lastCapture was set.")
@@ -19,20 +20,34 @@ class ARViewModel: NSObject, ARSessionDelegate, ObservableObject {
     
     
     func session(_ session: ARSession, didUpdate frame: ARFrame) {
+        latestCameraIntrinsics = frame.camera.intrinsics
+
+        print("RGB: \(latestCameraIntrinsics)")
+        
         latestDepthMap = frame.sceneDepth?.depthMap
         latestImage = frame.capturedImage
-        
+        if let sceneDepth = frame.sceneDepth {
+            let formatType = CVPixelBufferGetPixelFormatType(sceneDepth.depthMap)
+            print("Pixel Format:", formatType == kCVPixelFormatType_DepthFloat32 ? "Float32 (OK)" : "Other")
+
+            if sceneDepth.confidenceMap != nil {
+                print("Likely LiDAR-based depth")
+            } else {
+                print("Could be neural depth (non-LiDAR)")
+            }
+        }
+
     }
     
     func saveDepthMap() {
-        guard let depthMap = latestDepthMap, let image = latestImage else {
+        guard let depthMap = latestDepthMap, let image = latestImage, let cameraIntrinsics = latestCameraIntrinsics else {
             print("Depth map or image is not available.")
             return
         }
         
         let documentsDir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
         let dateFormatter = DateFormatter()
-        dateFormatter.dateFormat = "yyyyMMdd"
+        dateFormatter.dateFormat = "yyyyMMdd_with_parameters"
         let dateString = dateFormatter.string(from: Date())
         let dateDirURL = documentsDir.appendingPathComponent(dateString)
         
@@ -45,14 +60,21 @@ class ARViewModel: NSObject, ARSessionDelegate, ObservableObject {
         
         let timestamp = Date().timeIntervalSince1970
         let depthFileURL = dateDirURL.appendingPathComponent("\(timestamp)_depth.tiff")
+        let depthRawFileURL = dateDirURL.appendingPathComponent("\(timestamp)_depth.raw")
         let imageFileURL = dateDirURL.appendingPathComponent("\(timestamp)_image.jpg")
+        let intrinsicsFileURL = dateDirURL.appendingPathComponent("\(timestamp)_intrinsics.dat")
+            
+        do {
+            let intrinsicsData = cameraIntrinsics.toData()
+            try intrinsicsData.write(to: intrinsicsFileURL)
+            print("Intrinsics saved to \(intrinsicsFileURL)")
+        } catch {
+            print("Failed to save intrinsics: \(error)")
+        }
         
         writeDepthMapToTIFFWithLibTIFF(depthMap: depthMap, url: depthFileURL)
+        writeDepthMapToRawFile(depthMap: depthMap, url: depthRawFileURL)
         saveImage(image: image, url: imageFileURL)
-        
-        
-        
-        
         
         let uiImage = UIImage(ciImage: CIImage(cvPixelBuffer: image))
         
@@ -68,3 +90,9 @@ class ARViewModel: NSObject, ARSessionDelegate, ObservableObject {
     }
 }
 
+extension simd_float3x3 {
+    func toData() -> Data {
+        var matrix = self
+        return Data(bytes: &matrix, count: MemoryLayout<simd_float3x3>.size)
+    }
+}

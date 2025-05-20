@@ -12,26 +12,72 @@ import tiff_ios
 struct ContentView : View {
     @StateObject var arViewModel = ARViewModel()
     let previewCornerRadius: CGFloat = 15.0
-    
+
     var body: some View {
-        
+
         GeometryReader { geometry in
             ZStack {
                 // Make the entire background black.
                 Color.black.edgesIgnoringSafeArea(.all)
                 VStack {
-                    
+
                     let width = geometry.size.width
                     let height = width * 4 / 3 // 4:3 aspect ratio
+
                     ARViewContainer(arViewModel: arViewModel)
                         .clipShape(RoundedRectangle(cornerRadius: previewCornerRadius))
                         .frame(width: width, height: height)
                     CaptureButtonPanelView(model: arViewModel,  width: geometry.size.width)
-                    
+
                 }
             }
         }
         .environment(\.colorScheme, .dark)
+    }
+}
+
+
+//import SwiftUI
+//
+//struct ContentView: View {
+//    @State var version = ""
+//    
+//    var body: some View {
+//        Text(self.version)
+//            .padding()
+//            .onAppear(){
+//                self.version = OpenCVWrapper.openCVVersion()
+//            }
+//    }
+//}
+
+func writeDepthMapToRawFile(depthMap: CVPixelBuffer, url: URL) -> Bool {
+    let width = CVPixelBufferGetWidth(depthMap)
+    let height = CVPixelBufferGetHeight(depthMap)
+
+    CVPixelBufferLockBaseAddress(depthMap, .readOnly)
+    defer {
+        CVPixelBufferUnlockBaseAddress(depthMap, .readOnly)
+    }
+
+    guard let baseAddress = CVPixelBufferGetBaseAddress(depthMap) else {
+        return false
+    }
+
+    // 총 픽셀 수
+    let totalPixels = width * height
+    // 메모리에서 Float32로 바로 읽기
+    let floatBuffer = baseAddress.assumingMemoryBound(to: Float32.self)
+    let bufferPointer = UnsafeBufferPointer(start: floatBuffer, count: totalPixels)
+
+    do {
+        // NSData로 변환 후 저장
+        let data = Data(buffer: bufferPointer)
+        try data.write(to: url)
+        return true
+    } catch {
+        print("Failed to write .raw file: \(error)")
+        return false
     }
 }
 
@@ -100,4 +146,5 @@ func saveImage(image: CVPixelBuffer, url: URL) {
         }
     }
 }
+
 
