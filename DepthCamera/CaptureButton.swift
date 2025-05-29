@@ -28,6 +28,7 @@ struct CaptureButton: View {
     
     var body: some View {
         Button(action: {
+            model.sendCurrentLidarPosition()
             model.saveDepthMap()
         },label: {
             

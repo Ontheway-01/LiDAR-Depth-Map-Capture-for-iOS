@@ -53,7 +53,61 @@ struct ARViewContainer: UIViewRepresentable {
         return arView
     }
     
-    func updateUIView(_ uiView: ARView, context: Context) {}
+    func updateUIView(_ uiView: ARView, context: Context) {
+        let viewSize = uiView.bounds.size
+        guard viewSize.width > 0, viewSize.height > 0 else { return }
+        guard let bufferWidth = arViewModel.pixelBufferWidth,
+              let bufferHeight = arViewModel.pixelBufferHeight else { return }
+        let scaleX = viewSize.width / CGFloat(bufferHeight)
+        let scaleY = viewSize.height / CGFloat(bufferWidth)
+        print("bufferWidth: \(bufferWidth) / bufferHeight \(bufferHeight)")
+        
+        uiView.layer.sublayers?.removeAll(where: { $0.name == "circleOverlay" })
+        uiView.layer.sublayers?.removeAll(where: { $0.name == "textOverlay" })
+
+        for (index, circle) in arViewModel.detectedCircles.enumerated() {
+            let textLayer = CATextLayer()
+                textLayer.name = "textOverlay"
+                textLayer.string = "\(index + 1)"
+                textLayer.fontSize = 18
+                textLayer.foregroundColor = UIColor.systemGreen.cgColor
+                textLayer.alignmentMode = .center
+                textLayer.contentsScale = UIScreen.main.scale
+            let labelWidth: CGFloat = 24
+            let labelHeight: CGFloat = 24
+
+            let overlay = CAShapeLayer()
+            overlay.name = "circleOverlay"
+            let centerX = (CGFloat(bufferHeight) - CGFloat(circle.pixelY)) * scaleX
+            let centerY = CGFloat(circle.pixelX) * scaleY
+
+            let radius = CGFloat(circle.radius) * ((scaleX + scaleY) / 2)
+            
+            let rect = CGRect(x: centerX - radius,
+                              y: centerY - radius,
+                              width: radius * 2,
+                              height: radius * 2)
+            textLayer.frame = CGRect(
+                x: centerX - radius,
+                y: centerY - radius,
+                width: labelWidth,
+                height: labelHeight
+            )
+            overlay.path = UIBezierPath(ovalIn: rect).cgPath
+            overlay.strokeColor = UIColor.systemGreen.cgColor
+            overlay.fillColor = UIColor.clear.cgColor
+            overlay.lineWidth = 3.0
+            
+            textLayer.backgroundColor = UIColor.white.withAlphaComponent(0.7).cgColor
+            textLayer.cornerRadius = labelWidth / 2
+            textLayer.masksToBounds = true
+            
+            uiView.layer.addSublayer(overlay)
+            uiView.layer.addSublayer(textLayer)
+
+        }
+    }
+
 }
 
 

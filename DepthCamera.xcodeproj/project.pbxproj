@@ -7,6 +7,9 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		5096E0902DDC477A00A5A7E0 /* opencv2.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5096E08F2DDC477A00A5A7E0 /* opencv2.framework */; };
+		5096E0942DDC479000A5A7E0 /* OpenCVWrapper.mm in Sources */ = {isa = PBXBuildFile; fileRef = 5096E0932DDC479000A5A7E0 /* OpenCVWrapper.mm */; };
+		5096E0E12DDCBD0F00A5A7E0 /* LidarSender.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5096E0E02DDCBD0B00A5A7E0 /* LidarSender.swift */; };
 		71C3B3AD7A98BA3561007192 /* Pods_DepthCameraTests.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C5E46324A2B9674F59F1F8C /* Pods_DepthCameraTests.framework */; };
 		899DD7032CF71263004FE108 /* ARViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 899DD7022CF71263004FE108 /* ARViewModel.swift */; };
 		899DD7052CF71285004FE108 /* ARViewContainer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 899DD7042CF71285004FE108 /* ARViewContainer.swift */; };
@@ -46,6 +49,12 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		5096E08F2DDC477A00A5A7E0 /* opencv2.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = opencv2.framework; sourceTree = "<group>"; };
+		5096E0912DDC479000A5A7E0 /* DepthCamera-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "DepthCamera-Bridging-Header.h"; sourceTree = "<group>"; };
+		5096E0922DDC479000A5A7E0 /* OpenCVWrapper.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = OpenCVWrapper.h; sourceTree = "<group>"; };
+		5096E0932DDC479000A5A7E0 /* OpenCVWrapper.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = OpenCVWrapper.mm; sourceTree = "<group>"; };
+		5096E0972DDC47FC00A5A7E0 /* PrefixHeader.pch */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = PrefixHeader.pch; sourceTree = "<group>"; };
+		5096E0E02DDCBD0B00A5A7E0 /* LidarSender.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LidarSender.swift; sourceTree = "<group>"; };
 		5AD708927E8DD9D65325735B /* Pods-DepthCameraTests.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-DepthCameraTests.debug.xcconfig"; path = "Target Support Files/Pods-DepthCameraTests/Pods-DepthCameraTests.debug.xcconfig"; sourceTree = "<group>"; };
 		5C5E46324A2B9674F59F1F8C /* Pods_DepthCameraTests.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_DepthCameraTests.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		71F5030F13FAB4BF6261DA2C /* Pods-DepthCamera-DepthCameraUITests.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-DepthCamera-DepthCameraUITests.debug.xcconfig"; path = "Target Support Files/Pods-DepthCamera-DepthCameraUITests/Pods-DepthCamera-DepthCameraUITests.debug.xcconfig"; sourceTree = "<group>"; };
@@ -69,7 +78,6 @@
 		89B617392B14740B00280111 /* DepthCameraUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DepthCameraUITests.swift; sourceTree = "<group>"; };
 		89B6173B2B14740B00280111 /* DepthCameraUITestsLaunchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DepthCameraUITestsLaunchTests.swift; sourceTree = "<group>"; };
 		89B6174A2B14802900280111 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
-		89B8A9712BB2D33D00FD7106 /* Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "Bridging-Header.h"; sourceTree = "<group>"; };
 		89DE42E12CB3DECF00D43C0A /* color 2.glb */ = {isa = PBXFileReference; lastKnownFileType = file; path = "color 2.glb"; sourceTree = "<group>"; };
 		8F9F679CF8B7EE44C3DAACAC /* Pods_DepthCamera_DepthCameraUITests.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_DepthCamera_DepthCameraUITests.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		AC19CA33E5E5796BB47E68BF /* Pods-DepthCameraTests.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-DepthCameraTests.release.xcconfig"; path = "Target Support Files/Pods-DepthCameraTests/Pods-DepthCameraTests.release.xcconfig"; sourceTree = "<group>"; };
@@ -84,6 +92,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				5096E0902DDC477A00A5A7E0 /* opencv2.framework in Frameworks */,
 				DB0AE426B16D9FA02B997FED /* Pods_DepthCamera.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -107,6 +116,17 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		5096E08E2DDC476500A5A7E0 /* OpenCV */ = {
+			isa = PBXGroup;
+			children = (
+				5096E0922DDC479000A5A7E0 /* OpenCVWrapper.h */,
+				5096E0932DDC479000A5A7E0 /* OpenCVWrapper.mm */,
+				5096E0912DDC479000A5A7E0 /* DepthCamera-Bridging-Header.h */,
+				5096E0972DDC47FC00A5A7E0 /* PrefixHeader.pch */,
+			);
+			path = OpenCV;
+			sourceTree = "<group>";
+		};
 		89B617112B14740A00280111 = {
 			isa = PBXGroup;
 			children = (
@@ -132,7 +152,8 @@
 		89B6171C2B14740A00280111 /* DepthCamera */ = {
 			isa = PBXGroup;
 			children = (
-				89B8A9712BB2D33D00FD7106 /* Bridging-Header.h */,
+				5096E0E02DDCBD0B00A5A7E0 /* LidarSender.swift */,
+				5096E08E2DDC476500A5A7E0 /* OpenCV */,
 				89B6174A2B14802900280111 /* Info.plist */,
 				899DD7042CF71285004FE108 /* ARViewContainer.swift */,
 				899DD7022CF71263004FE108 /* ARViewModel.swift */,
@@ -192,6 +213,7 @@
 		C0163DDF423E92E8B9F2B809 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				5096E08F2DDC477A00A5A7E0 /* opencv2.framework */,
 				89DE42E12CB3DECF00D43C0A /* color 2.glb */,
 				E227FAB191BC5550BAC2DB4A /* Pods_DepthCamera.framework */,
 				8F9F679CF8B7EE44C3DAACAC /* Pods_DepthCamera_DepthCameraUITests.framework */,
@@ -273,6 +295,7 @@
 				TargetAttributes = {
 					89B617192B14740A00280111 = {
 						CreatedOnToolsVersion = 15.0.1;
+						LastSwiftMigration = 1600;
 					};
 					89B6172A2B14740B00280111 = {
 						CreatedOnToolsVersion = 15.0.1;
@@ -447,6 +470,8 @@
 				899DD70D2CF7135D004FE108 /* DocumentPicker.swift in Sources */,
 				89B617202B14740A00280111 /* ContentView.swift in Sources */,
 				899DD70B2CF71336004FE108 /* ThumbnailView.swift in Sources */,
+				5096E0942DDC479000A5A7E0 /* OpenCVWrapper.mm in Sources */,
+				5096E0E12DDCBD0F00A5A7E0 /* LidarSender.swift in Sources */,
 				899DD70F2CF71376004FE108 /* CaptureButton.swift in Sources */,
 				89B6171E2B14740A00280111 /* DepthCameraApp.swift in Sources */,
 			);
@@ -605,6 +630,8 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = DepthCamera/DepthCamera.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
@@ -614,7 +641,18 @@
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PROJECT_DIR)",
+					"$(PROJECT_DIR)/Frameworks",
+				);
+				GCC_PREFIX_HEADER = "$(SRCROOT)/DepthCamera/OpenCV/PrefixHeader.pch";
 				GENERATE_INFOPLIST_FILE = YES;
+				HEADER_SEARCH_PATHS = (
+					"$(inherited)",
+					"\"${PODS_CONFIGURATION_BUILD_DIR}/tiff-ios/tiff_ios.framework/Headers\"",
+					"$(PROJECT_DIR)/Frameworks/OpenCV2.framework/Headers/**",
+				);
 				INFOPLIST_FILE = DepthCamera/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Depth Camera RAW";
 				INFOPLIST_KEY_LSSupportsOpeningDocumentsInPlace = YES;
@@ -642,7 +680,9 @@
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SUPPORTS_MACCATALYST = NO;
 				SWIFT_EMIT_LOC_STRINGS = YES;
-				"SWIFT_OBJC_BRIDGING_HEADER[arch=*]" = "$(SRCROOT)/$(PROJECT)/Bridging-Header.h";
+				SWIFT_OBJC_BRIDGING_HEADER = "DepthCamera/OpenCV/DepthCamera-Bridging-Header.h";
+				"SWIFT_OBJC_BRIDGING_HEADER[arch=*]" = "DepthCamera/OpenCV/DepthCamera-Bridging-Header.h";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = 1;
 			};
@@ -654,6 +694,8 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = DepthCamera/DepthCamera.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
@@ -663,7 +705,17 @@
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PROJECT_DIR)",
+				);
+				GCC_PREFIX_HEADER = "$(SRCROOT)/DepthCamera/OpenCV/PrefixHeader.pch";
 				GENERATE_INFOPLIST_FILE = YES;
+				HEADER_SEARCH_PATHS = (
+					"$(inherited)",
+					"\"${PODS_CONFIGURATION_BUILD_DIR}/tiff-ios/tiff_ios.framework/Headers\"",
+					"$(PROJECT_DIR)/Frameworks/OpenCV2.framework/Headers/**",
+				);
 				INFOPLIST_FILE = DepthCamera/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Depth Camera RAW";
 				INFOPLIST_KEY_LSSupportsOpeningDocumentsInPlace = YES;
@@ -691,7 +743,8 @@
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SUPPORTS_MACCATALYST = NO;
 				SWIFT_EMIT_LOC_STRINGS = YES;
-				"SWIFT_OBJC_BRIDGING_HEADER[arch=*]" = "$(SRCROOT)/$(PROJECT)/Bridging-Header.h";
+				SWIFT_OBJC_BRIDGING_HEADER = "DepthCamera/OpenCV/DepthCamera-Bridging-Header.h";
+				"SWIFT_OBJC_BRIDGING_HEADER[arch=*]" = "DepthCamera/OpenCV/DepthCamera-Bridging-Header.h";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = 1;
 			};
