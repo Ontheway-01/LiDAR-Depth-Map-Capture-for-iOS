@@ -35,29 +35,6 @@ struct CaptureButtonPanelView: View {
                 Spacer()
             }
             HStack {
-                /*
-                 
-                 Spacer()
-                 
-                 Spacer()
-                 Button( action: {
-                 
-                 }) {
-                 Text("")
-                 .font(.system(size: 14)).bold()
-                 
-                 .foregroundColor(.white)
-                 .padding()
-                 .frame(width: 60 , height: 60)
-                 .overlay(
-                 RoundedRectangle(cornerRadius: 10)
-                 .stroke(Color.white, lineWidth: 2)
-                 )
-                 
-                 .padding(.horizontal)
-                 }
-                 
-                 */
                 
             }
         }

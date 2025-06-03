@@ -7,7 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		5096E0902DDC477A00A5A7E0 /* opencv2.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5096E08F2DDC477A00A5A7E0 /* opencv2.framework */; };
+		5010AB4C2DE8382100F93E39 /* opencv2.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5010AB4B2DE8382100F93E39 /* opencv2.framework */; };
 		5096E0942DDC479000A5A7E0 /* OpenCVWrapper.mm in Sources */ = {isa = PBXBuildFile; fileRef = 5096E0932DDC479000A5A7E0 /* OpenCVWrapper.mm */; };
 		5096E0E12DDCBD0F00A5A7E0 /* LidarSender.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5096E0E02DDCBD0B00A5A7E0 /* LidarSender.swift */; };
 		71C3B3AD7A98BA3561007192 /* Pods_DepthCameraTests.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C5E46324A2B9674F59F1F8C /* Pods_DepthCameraTests.framework */; };
@@ -49,7 +49,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-		5096E08F2DDC477A00A5A7E0 /* opencv2.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = opencv2.framework; sourceTree = "<group>"; };
+		5010AB4B2DE8382100F93E39 /* opencv2.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = opencv2.framework; sourceTree = "<group>"; };
 		5096E0912DDC479000A5A7E0 /* DepthCamera-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "DepthCamera-Bridging-Header.h"; sourceTree = "<group>"; };
 		5096E0922DDC479000A5A7E0 /* OpenCVWrapper.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = OpenCVWrapper.h; sourceTree = "<group>"; };
 		5096E0932DDC479000A5A7E0 /* OpenCVWrapper.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = OpenCVWrapper.mm; sourceTree = "<group>"; };
@@ -92,7 +92,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				5096E0902DDC477A00A5A7E0 /* opencv2.framework in Frameworks */,
+				5010AB4C2DE8382100F93E39 /* opencv2.framework in Frameworks */,
 				DB0AE426B16D9FA02B997FED /* Pods_DepthCamera.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -213,7 +213,7 @@
 		C0163DDF423E92E8B9F2B809 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
-				5096E08F2DDC477A00A5A7E0 /* opencv2.framework */,
+				5010AB4B2DE8382100F93E39 /* opencv2.framework */,
 				89DE42E12CB3DECF00D43C0A /* color 2.glb */,
 				E227FAB191BC5550BAC2DB4A /* Pods_DepthCamera.framework */,
 				8F9F679CF8B7EE44C3DAACAC /* Pods_DepthCamera_DepthCameraUITests.framework */,

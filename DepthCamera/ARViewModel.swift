@@ -25,7 +25,7 @@ struct LidarData {
 }
 
 class ARViewModel: NSObject, ARSessionDelegate, ObservableObject {
-    let lidarSender = LidarSender(host: "192.168.1.38", port: 5005)
+    let lidarSender = LidarSender(host: "192.168.0.8", port: 5005)
     private var latestDepthMap: CVPixelBuffer?
     private var latestImage: CVPixelBuffer?
     private var latestCameraIntrinsics: simd_float3x3?
