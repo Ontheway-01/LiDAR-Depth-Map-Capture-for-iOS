@@ -10,9 +10,205 @@
 #import <opencv2/opencv.hpp>
 #import <ARKit/ARKit.h>
 #import <CoreVideo/CoreVideo.h>
-
+#import <opencv2/imgcodecs/ios.h>
 @implementation OpenCVWrapper
 
+//from here triangle's vertex: red, green, blue
++ (NSDictionary*)detectTriangleAndComputePoseWithPixelBuffer:
+(CVPixelBufferRef)pixelBuffer
+                                                 depthBuffer:
+(CVPixelBufferRef)depthBuffer
+                                             cameraIntrinsic:
+(const float *)intrinsics
+{
+    NSDictionary *result = {};
+
+    // 1. pixelBuffer(YUV) → BGR 변환 (OpenCV)
+    CVPixelBufferLockBaseAddress(pixelBuffer, 0);
+    size_t width = CVPixelBufferGetWidth(pixelBuffer);
+    size_t height = CVPixelBufferGetHeight(pixelBuffer);
+
+    // Y plane
+    uint8_t *yPlane = (uint8_t *)CVPixelBufferGetBaseAddressOfPlane(pixelBuffer, 0);
+    size_t yPitch = CVPixelBufferGetBytesPerRowOfPlane(pixelBuffer, 0);
+    cv::Mat yMat((int)height, (int)width, CV_8UC1, yPlane, yPitch);
+
+    // UV plane (NV12)
+    uint8_t *uvPlane = (uint8_t *)CVPixelBufferGetBaseAddressOfPlane(pixelBuffer, 1);
+    size_t uvPitch = CVPixelBufferGetBytesPerRowOfPlane(pixelBuffer, 1);
+    cv::Mat uvMat((int)height/2, (int)width/2, CV_8UC2, uvPlane, uvPitch);
+
+    // YUV → BGR
+    cv::Mat bgrMat;
+    cv::cvtColorTwoPlane(yMat, uvMat, bgrMat, cv::COLOR_YUV2BGR_NV12);
+    CVPixelBufferUnlockBaseAddress(pixelBuffer, 0);
+
+    // 2. HSV 변환 및 색상별 마스크
+    cv::Mat hsvMat;
+    cv::cvtColor(bgrMat, hsvMat, cv::COLOR_BGR2HSV);
+
+    // 빨강 (0-10 & 160-180)
+    cv::Mat lowerRed1, lowerRed2, redMask;
+    cv::inRange(hsvMat, cv::Scalar(0, 150, 100), cv::Scalar(10, 255, 255), lowerRed1);
+    cv::inRange(hsvMat, cv::Scalar(160, 150, 100), cv::Scalar(179, 255, 255), lowerRed2);
+    cv::bitwise_or(lowerRed1, lowerRed2, redMask);
+
+    // 초록 (35-85)
+    cv::Mat greenMask;
+    cv::inRange(hsvMat, cv::Scalar(35, 100, 100), cv::Scalar(85, 255, 255), greenMask);
+
+    // 파랑 (100-130)
+    cv::Mat blueMask;
+    cv::inRange(hsvMat, cv::Scalar(100, 100, 100), cv::Scalar(130, 255, 255), blueMask);
+
+    // 3. 블러 및 원 검출
+    cv::GaussianBlur(redMask, redMask, cv::Size(9,9), 2);
+    cv::GaussianBlur(greenMask, greenMask, cv::Size(9,9), 2);
+    cv::GaussianBlur(blueMask, blueMask, cv::Size(9,9), 2);
+
+    std::vector<cv::Vec3f> redCircles, greenCircles, blueCircles;
+    cv::HoughCircles(redMask, redCircles, cv::HOUGH_GRADIENT, 1, redMask.rows/8, 100, 20, 0, 0);
+    cv::HoughCircles(greenMask, greenCircles, cv::HOUGH_GRADIENT, 1, greenMask.rows/8, 100, 20, 0, 0);
+    cv::HoughCircles(blueMask, blueCircles, cv::HOUGH_GRADIENT, 1, blueMask.rows/8, 100, 20, 0, 0);
+
+    // 4. 검출 실패 시 기본값 반환
+    if (redCircles.empty() || greenCircles.empty() || blueCircles.empty()) {
+        printf("Less than 3 circles detected.\n");
+        NSMutableArray *pixelCenters = [NSMutableArray array];
+        for (int i = 0; i < 3; i++) {
+            [pixelCenters addObject:@{@"x": @(0.0f), @"y": @(0.0f), @"radius": @(0.0f)}];
+        }
+        NSMutableDictionary *rotationDict = [NSMutableDictionary dictionary];
+        for (int i = 0; i < 3; i++)
+            for (int j = 0; j < 3; j++)
+                rotationDict[[NSString stringWithFormat:@"r%d%d", i, j]] = @(0.0f);
+
+        return @{
+            @"camera_position": @{@"x": @(0.0f), @"y": @(0.0f), @"z": @(0.0f)},
+            @"lidar_position": @{@"x": @(0.0f), @"y": @(0.0f), @"z": @(0.0f)},
+            @"rotation_world_to_camera": rotationDict,
+            @"pixel_centers": pixelCenters
+        };
+    }
+
+    // 5. 깊이 버퍼에서 3D 좌표 추출
+    CVPixelBufferLockBaseAddress(depthBuffer, kCVPixelBufferLock_ReadOnly);
+    float *depthBase = (float *)CVPixelBufferGetBaseAddress(depthBuffer);
+    size_t depthWidth = CVPixelBufferGetWidth(depthBuffer);
+    size_t depthHeight = CVPixelBufferGetHeight(depthBuffer);
+    int depthBytesPerRow = CVPixelBufferGetBytesPerRow(depthBuffer) / sizeof(float);
+    cv::Mat depthMat((int)depthHeight, (int)depthWidth, CV_32FC1, depthBase, depthBytesPerRow * sizeof(float));
+    CVPixelBufferUnlockBaseAddress(depthBuffer, kCVPixelBufferLock_ReadOnly);
+
+    // 6. LiDAR 3D 좌표 계산 (빨강, 초록, 파랑 순)
+    std::vector<cv::Vec3f> detectedCircles = {redCircles[0], greenCircles[0], blueCircles[0]};
+    
+    struct CircleInfo {
+        float x, y, radius, depth;
+    };
+    std::vector<CircleInfo> points2DDepth;
+    NSMutableArray *pixelCenters = [NSMutableArray array];
+    for (int i = 0; i < 3; i++) {
+        float x = detectedCircles[i][0];
+        float y = detectedCircles[i][1];
+        float radius = detectedCircles[i][2];
+        [pixelCenters addObject:@{@"x": @(x), @"y": @(y), @"radius": @(radius)}];
+        
+        int dx = (int)round(x * ((float)depthWidth / width));
+        int dy = (int)round(y * ((float)depthHeight / height));
+        
+        float depth = 0.0f;
+        if (dx >= 0 && dx < depthWidth && dy >= 0 && dy < depthHeight) {
+            depth = depthMat.at<float>(dy, dx);
+        }
+        
+        points2DDepth.push_back({x, y, radius, depth * 100.0f});
+    }
+    std::vector<cv::Point3f> measuredPts;
+
+    cv::Matx33f K(
+        intrinsics[0], intrinsics[3], intrinsics[6],
+        intrinsics[1], intrinsics[4], intrinsics[7],
+        intrinsics[2], intrinsics[5], intrinsics[8]
+    );
+    float fx = K(0,0), fy = K(1,1), cx = K(0,2), cy = K(1,2);
+
+    for (int i = 0; i < 3; i++) {
+        float u = points2DDepth[i].x;
+        float v = points2DDepth[i].y;
+//        float Z = points2DDepth[idx].depth;
+        
+        float denominator = sqrt( pow((u - cx)/fx, 2) + pow((v - cy)/fy, 2) + 1 );
+        float Z = points2DDepth[i].depth / denominator;
+
+        float X = - (v - cy) / fy * Z;        // X: 부호 그대로
+        float Y = (u - cx) / fx * Z;
+        measuredPts.push_back(cv::Point3f(X, Y, Z));
+    }
+
+    // 7. 기준 삼각형 좌표 (빨강, 초록, 파랑 순)
+    std::vector<cv::Point3f> triPts = {
+        {0.0f, 0.0f, 0.0f},
+        {4.0f, 0.0f, 0.0f},
+        {2.0f, 2.0f * std::sqrt(3.0f), 0.0f}
+    };
+
+    // 8. LiDAR 위치 계산 (rigid transform)
+    cv::Mat R_lidar, t_lidar;
+    rigid_transform_3D(measuredPts, triPts, R_lidar, t_lidar);
+
+    // 9. 카메라 포즈 계산 (solvePnP)
+    std::vector<cv::Point2f> imagePoints = {
+        cv::Point2f(detectedCircles[0][0], detectedCircles[0][1]),
+        cv::Point2f(detectedCircles[1][0], detectedCircles[1][1]),
+        cv::Point2f(detectedCircles[2][0], detectedCircles[2][1])
+    };
+
+    cv::Mat cameraMatrix = (cv::Mat_<double>(3,3) << fx, 0, cx, 0, fy, cy, 0, 0, 1);
+    cv::Mat rvec, tvec;
+    cv::solvePnP(triPts, imagePoints, cameraMatrix, cv::noArray(), rvec, tvec);
+
+    cv::Mat R_lidar_world_t = R_lidar.t();
+    cv::Mat R_cam_lidar = rvec * R_lidar_world_t;
+    cv::Mat t_cam_lidar = tvec - R_cam_lidar * t_lidar;
+
+    // 10. 결과 반환 (단위: cm)
+    simd_float3 lidarToCameraOffset = simd_make_float3(
+        t_cam_lidar.at<double>(0),
+        t_cam_lidar.at<double>(1),
+        t_cam_lidar.at<double>(2)
+    );
+
+    // 10. LiDAR 위치를 카메라 좌표계로 변환 (필요시)
+    cv::Mat R_cam;
+    cv::Rodrigues(rvec, R_cam);
+//    cv::Mat t_lidar_cam = R_cam * t_lidar + tvec;
+    NSMutableDictionary *rotationDict = [NSMutableDictionary dictionary];
+    for (int i = 0; i < 3; i++) {
+        for (int j = 0; j < 3; j++) {
+            NSString *key = [NSString stringWithFormat:@"r%d%d", i, j];
+            rotationDict[key] = @(R_cam.at<double>(i, j));
+        }
+    }
+
+    // 11. 결과 반환
+    return @{
+        @"camera_position": @{
+            @"x": @(tvec.at<double>(0)),
+            @"y": @(tvec.at<double>(1)),
+            @"z": @(tvec.at<double>(2))
+        },
+        @"lidar_position": @{
+            @"x": @(t_lidar.at<double>(0,0)),
+            @"y": @(t_lidar.at<double>(1,0)),
+            @"z": @(t_lidar.at<double>(2,0))
+        },
+        @"rotation_world_to_camera": rotationDict,
+        @"pixel_centers": pixelCenters
+    };
+}
+
+//from here triangle's vertex: red
 + (NSArray<NSDictionary *> *)detectRedCirclesInPixelBuffer:
 (CVPixelBufferRef)pixelBuffer
                                                depthBuffer:

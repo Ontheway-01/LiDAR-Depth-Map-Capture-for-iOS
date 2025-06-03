@@ -12,6 +12,20 @@
 NS_ASSUME_NONNULL_BEGIN
 
 @interface OpenCVWrapper : NSObject
+//+ (NSArray<NSDictionary *> *)detectColoredCirclesInPixelBuffer:
+//(CVPixelBufferRef)pixelBuffer
+//                                                   depthBuffer:
+//(CVPixelBufferRef)depthBuffer
+//                                               intrinsicsArray:
+//(const float *)intrinsicsArray
+//;
++ (NSDictionary*)detectTriangleAndComputePoseWithPixelBuffer:
+(CVPixelBufferRef)pixelBuffer
+                                                 depthBuffer:
+(CVPixelBufferRef)depthBuffer
+                                             cameraIntrinsic:
+(const float *)intrinsics
+;
 
 + (NSArray<NSDictionary *> *)detectRedCirclesInPixelBuffer:
 (CVPixelBufferRef)pixelBuffer

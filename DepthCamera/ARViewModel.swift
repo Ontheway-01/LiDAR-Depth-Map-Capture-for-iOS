@@ -84,27 +84,45 @@ class ARViewModel: NSObject, ARSessionDelegate, ObservableObject {
 
 
         DispatchQueue.global(qos: .userInitiated).async {
-            let results = OpenCVWrapper.detectRedCircles(in: pixelBuffer, depthBuffer: depthMap, intrinsicsArray: intrinsicsArray) as? [[String: NSNumber]]
+            let result = OpenCVWrapper.detectTriangleAndComputePose(with: pixelBuffer, depthBuffer: depthMap, cameraIntrinsic: intrinsicsArray) as? [[String: NSNumber]]
 
             var circles: [CircleData] = []
             var lidar: LidarData = LidarData(lidarX: 0.0, lidarY: 0.0, lidarZ: 0.0)
 
-            results?.forEach { dict in
-                if let px = dict["pixel_x"]?.doubleValue,
-                   let py = dict["pixel_y"]?.doubleValue,
-                   let radius = dict["radius"]?.doubleValue,
-                   let depth = dict["depth"]?.doubleValue,
-                   let tx = dict["triangle_x"]?.doubleValue,
-                   let ty = dict["triangle_y"]?.doubleValue,
-                   let tz = dict["triangle_z"]?.doubleValue,
-                   let lx = dict["lidar_x"]?.doubleValue,
-                   let ly = dict["lidar_y"]?.doubleValue,
-                   let lz = dict["lidar_z"]?.doubleValue{
-                    let circle = CircleData(pixelX: px, pixelY: py, radius: radius, depth: depth, triangleX: tx, triangleY: ty, triangleZ: tz)
-                    lidar = LidarData(lidarX: lx, lidarY: ly, lidarZ: lz)
-                    circles.append(circle)
+            let cameraPos = result["camera_position"] as! [String: Double]
+            let lidarPos = result["lidar_position"] as! [String: Double]
+
+            // 회전 행렬
+            let rotDict = result["rotation_world_to_camera"] as! [String: Double]
+            var rotationMatrix = [[Double]](repeating: [Double](repeating: 0.0, count: 3), count: 3)
+            for i in 0..<3 {
+                for j in 0..<3 {
+                    rotationMatrix[i][j] = rotDict["r\(i)\(j)"] ?? 0.0
                 }
             }
+
+            // 픽셀 위치 (동그라미 중심)
+            let pixelCenters = result["pixel_centers"] as! [[String: Double]]
+            let centers: [CGPoint] = pixelCenters.map { dict in
+                CGPoint(x: dict["x"] ?? 0.0, y: dict["y"] ?? 0.0)
+            }
+            
+//            results?.forEach { dict in
+//                if let px = dict["pixel_x"]?.doubleValue,
+//                   let py = dict["pixel_y"]?.doubleValue,
+//                   let radius = dict["radius"]?.doubleValue,
+//                   let depth = dict["depth"]?.doubleValue,
+//                   let tx = dict["triangle_x"]?.doubleValue,
+//                   let ty = dict["triangle_y"]?.doubleValue,
+//                   let tz = dict["triangle_z"]?.doubleValue,
+//                   let lx = dict["lidar_x"]?.doubleValue,
+//                   let ly = dict["lidar_y"]?.doubleValue,
+//                   let lz = dict["lidar_z"]?.doubleValue{
+//                    let circle = CircleData(pixelX: px, pixelY: py, radius: radius, depth: depth, triangleX: tx, triangleY: ty, triangleZ: tz)
+//                    lidar = LidarData(lidarX: lx, lidarY: ly, lidarZ: lz)
+//                    circles.append(circle)
+//                }
+//            }
 
             DispatchQueue.main.async {
                 self.detectedCircles = circles
