@@ -11,9 +11,119 @@
 #import <ARKit/ARKit.h>
 #import <CoreVideo/CoreVideo.h>
 #import <opencv2/imgcodecs/ios.h>
+#import <opencv2/calib3d.hpp>
 @implementation OpenCVWrapper
 
 //from here triangle's vertex: red, green, blue
+// MARK: - 호모그래피 분해를 통한 회전 계산
++ (NSDictionary *)computeRotationViaHomography:(const std::vector<cv::Point2f>&)imagePoints
+                                 objectPoints:(const std::vector<cv::Point3f>&)objectPoints
+                               cameraMatrix:(const cv::Mat&)cameraMatrix {
+    // 호모그래피 계산 (Z=0 평면 가정)
+    std::vector<cv::Point2f> objectPoints2D;
+    for (const auto& pt : objectPoints) {
+        objectPoints2D.emplace_back(pt.x, pt.y);
+    }
+    cv::Mat H = cv::findHomography(objectPoints2D, imagePoints);
+    
+    // 호모그래피 분해
+    std::vector<cv::Mat> Rs, Ts, normals;
+    cv::decomposeHomographyMat(H, cameraMatrix, Rs, Ts, normals);
+    
+    // 첫 번째 해를 선택 (실제 환경에 맞게 보정 필요)
+    cv::Mat R;
+    if (!Rs.empty()) {
+        R = Rs[0];
+    } else {
+        R = cv::Mat::eye(3, 3, CV_64F);
+    }
+    
+    return [self rotationMatrixToDict:R];
+}
+
+// MARK: - 소실점 분석을 통한 회전 계산
++ (NSDictionary *)computeRotationViaVanishingPoints:(const std::vector<cv::Point2f>&)imagePoints
+                                     cameraMatrix:(const cv::Mat&)cameraMatrix {
+    // 삼각형 에지에서 소실점 계산
+    std::vector<cv::Vec4i> lines;
+    for (int i=0; i<3; i++) {
+        cv::Point2f p1 = imagePoints[i];
+        cv::Point2f p2 = imagePoints[(i+1)%3];
+        lines.emplace_back(p1.x, p1.y, p2.x, p2.y);
+    }
+    
+    // 소실점 계산 (두 에지의 교차점)
+    cv::Point2f vp1 = computeVanishingPoint(lines[0], lines[1]);
+    cv::Point2f vp2 = computeVanishingPoint(lines[1], lines[2]);
+    
+    // 소실점을 이용한 회전 계산
+    double fx = cameraMatrix.at<double>(0,0);
+    double fy = cameraMatrix.at<double>(1,1);
+    double cx = cameraMatrix.at<double>(0,2);
+    double cy = cameraMatrix.at<double>(1,2);
+    
+    double pitch = atan2(vp1.y - cy, fy);
+    double yaw = atan2(vp1.x - cx, fx);
+    
+    cv::Mat R = eulerAnglesToRotationMatrix(pitch, 0, yaw);
+    return [self rotationMatrixToDict:R];
+}
+
+// MARK: - LiDAR 융합을 통한 회전 계산
++ (NSDictionary *)computeRotationViaLiDAR:(const std::vector<cv::Point3f>&)lidarPoints
+                            objectPoints:(const std::vector<cv::Point3f>&)objectPoints {
+    cv::Mat R, t;
+    rigid_transform_3D(lidarPoints, objectPoints, R, t);
+    return [self rotationMatrixToDict:R];
+}
+
+// MARK: - 공통 함수
++ (NSDictionary *)rotationMatrixToDict:(const cv::Mat&)R {
+    NSMutableDictionary *dict = [NSMutableDictionary dictionary];
+    for (int i=0; i<3; i++) {
+        for (int j=0; j<3; j++) {
+            NSString *key = [NSString stringWithFormat:@"r%d%d", i, j];
+            dict[key] = @(R.at<double>(i, j));
+        }
+    }
+    return dict;
+}
+
+cv::Point2f computeVanishingPoint(const cv::Vec4i& line1, const cv::Vec4i& line2) {
+    // 두 직선의 교차점 계산
+    cv::Point2f p1(line1[0], line1[1]);
+    cv::Point2f p2(line1[2], line1[3]);
+    cv::Point2f q1(line2[0], line2[1]);
+    cv::Point2f q2(line2[2], line2[3]);
+    
+    cv::Point2f vp;
+    float denom = (p1.x - p2.x)*(q1.y - q2.y) - (p1.y - p2.y)*(q1.x - q2.x);
+    if (denom != 0) {
+        vp.x = ((p1.x*p2.y - p1.y*p2.x)*(q1.x - q2.x) - (p1.x - p2.x)*(q1.x*q2.y - q1.y*q2.x)) / denom;
+        vp.y = ((p1.x*p2.y - p1.y*p2.x)*(q1.y - q2.y) - (p1.y - p2.y)*(q1.x*q2.y - q1.y*q2.x)) / denom;
+    }
+    return vp;
+}
+
+cv::Mat eulerAnglesToRotationMatrix(double pitch, double roll, double yaw) {
+    cv::Mat R_x = (cv::Mat_<double>(3,3) <<
+        1, 0, 0,
+        0, cos(pitch), -sin(pitch),
+        0, sin(pitch), cos(pitch));
+    
+    cv::Mat R_y = (cv::Mat_<double>(3,3) <<
+        cos(roll), 0, sin(roll),
+        0, 1, 0,
+        -sin(roll), 0, cos(roll));
+        
+    cv::Mat R_z = (cv::Mat_<double>(3,3) <<
+        cos(yaw), -sin(yaw), 0,
+        sin(yaw), cos(yaw), 0,
+        0, 0, 1);
+        
+    return R_z * R_y * R_x;
+}
+
 + (NSDictionary*)detectTriangleAndComputePoseWithPixelBuffer:
 (CVPixelBufferRef)pixelBuffer
                                                  depthBuffer:
@@ -163,47 +273,178 @@
         cv::Point2f(detectedCircles[1][0], detectedCircles[1][1]),
         cv::Point2f(detectedCircles[2][0], detectedCircles[2][1])
     };
+    cv::Mat cameraMatrix = (cv::Mat_<double>(3,3) <<
+        intrinsics[0], intrinsics[3], intrinsics[6],
+        intrinsics[1], intrinsics[4], intrinsics[7],
+        intrinsics[2], intrinsics[5], intrinsics[8]);
+//    NSDictionary *homographyRot = [self computeRotationViaHomography:imagePoints
+//                                                        objectPoints:triPts
+//                                                        cameraMatrix:cameraMatrix];
+    std::vector<cv::Point3d> triPts3D = {
+        {0.0f, 0.0f, 0.0f},
+        {4.0f, 0.0f, 0.0f},
+        {2.0f, 2.0f * std::sqrt(3.0f), 0.0f}
+    };
+    std::vector<cv::Point2d> imagePoints2D = {
+        cv::Point2d(detectedCircles[0][0], detectedCircles[0][1]),
+        cv::Point2d(detectedCircles[1][0], detectedCircles[1][1]),
+        cv::Point2d(detectedCircles[2][0], detectedCircles[2][1])
+    };
+    std::vector<cv::Mat> rvecs, tvecs;
+    cv::Mat rvec, tvec; // 이동 벡터 초기값 (0)
+//    cv::Mat rvec = cv::Mat::zeros(3, 1, CV_64F);
+//    cv::Mat tvec = cv::Mat::zeros(3, 1, CV_64F);
+//    cv::Mat cam_rvec, cam_tvec;
+//    bool success = cv::solvePnPGeneric(triPts, imagePoints, cameraMatrix, cv::noArray(), rvec, tvec, true, cv::SOLVEPNP_ITERATIVE);
+    cv::solveP3P(triPts, imagePoints, cameraMatrix, cv::noArray(), rvecs, tvecs, cv::SOLVEPNP_P3P);
+    if (rvecs.empty() || tvecs.empty()){
+        printf("failed");
+        NSMutableArray *pixelCenterss = [NSMutableArray array];
+        for (int i = 0; i < 3; i++) {
+            [pixelCenterss addObject:@{@"x": @(0.0f), @"y": @(0.0f), @"radius": @(0.0f)}];
+        }
+        return @{
+    //        @"camera_position": @{
+    //            @"x": @(tvec.at<double>(0)),
+    //            @"y": @(tvec.at<double>(1)),
+    //            @"z": @(tvec.at<double>(2))
+    //        },
+            @"lidar_position": @{
+                @"x": @(0.0f),
+                @"y": @(0.0f),
+                @"z": @(0.0f)
+            },
+            @"normal": @{ @"x": @(0.0f), @"y": @(0.0f), @"z": @(0.0f) },
+            @"plane_equation": @{ @"a": @(0.0f), @"b": @(0.0f), @"c": @(0.0f), @"d": @(0.0f) },
+    //        @"rotation_world_to_camera": rotationDict,
+            @"pixel_centers": pixelCenterss
+        };
+    }
+//    if (success) {
+//        cam_rvec = rvec;
+//        cam_tvec = tvec;
+//    }
+    cv::Point3f lidarPos(t_lidar.at<double>(0,0), t_lidar.at<double>(1,0), t_lidar.at<double>(2,0));
+    cv::Point3f vertex1(0.0f, 0.0f, 0.0f);
+    double lidarDepth = cv::norm(lidarPos - vertex1);
 
-    cv::Mat cameraMatrix = (cv::Mat_<double>(3,3) << fx, 0, cx, 0, fy, cy, 0, 0, 1);
-    cv::Mat rvec, tvec;
-    cv::solvePnP(triPts, imagePoints, cameraMatrix, cv::noArray(), rvec, tvec);
+    if (!rvecs.empty()) {
+        // 여러 해 중 LiDAR 깊이와 가장 가까운 해 선택
+//        int bestIdx = 0;
+//        double minDepthDiff = std::numeric_limits<double>::max();
+//        for (size_t i = 0; i < tvecs.size(); ++i) {
+//            double distance = cv::norm(tvecs[i]);
+//            double diff = std::abs(distance - points2DDepth[0].depth); // lidarDepth는 실제 깊이
+//            if (diff < minDepthDiff) {
+//                minDepthDiff = diff;
+//                bestIdx = i;
+//            }
+//        }
+//        rvec = rvecs[bestIdx];
+//        tvec = tvecs[bestIdx];
+//        // rvec, tvec이 최종 카메라 포즈
+        int bestIdx = -1;
+        double minDiff = std::numeric_limits<double>::max();
+        for (size_t i = 0; i < tvecs.size(); ++i) {
+            // 카메라 중심(=tvec) ~ 월드 원점(=objectPoints[0])의 유클리드 거리
+            cv::Mat tvec = tvecs[i];
+            cv::Point3f cameraPos(tvec.at<double>(0), tvec.at<double>(1), tvec.at<double>(2));
+            double distance = cv::norm(cameraPos);
+            double diff = std::abs(distance - lidarDepth);
+            if (diff < minDiff) {
+                minDiff = diff;
+                bestIdx = i;
+            }
+        }
+        // bestIdx가 최적 해
+        cv::Mat rvec = rvecs[bestIdx];
+        cv::Mat tvec = tvecs[bestIdx];
+    }
+    cv::Mat R;
+    cv::Rodrigues(rvec, R); // rvec → 회전 행렬 R 변환
 
-    cv::Mat R_lidar_world_t = R_lidar.t();
-    cv::Mat R_cam_lidar = rvec * R_lidar_world_t;
-    cv::Mat t_cam_lidar = tvec - R_cam_lidar * t_lidar;
+    // 회전 행렬 R의 세 번째 열이 카메라의 Z축 (정면 방향)
+    cv::Mat normal = (cv::Mat_<double>(3,1) << R.at<double>(0,2),
+                                              R.at<double>(1,2),
+                                              R.at<double>(2,2));
+    // 카메라 위치 (tvec)에서 평면 방정식의 D 계산
+    double A = normal.at<double>(0);
+    double B = normal.at<double>(1);
+    double C = normal.at<double>(2);
+    double D = -(A * tvec.at<double>(0) +
+                 B * tvec.at<double>(1) +
+                 C * tvec.at<double>(2));
+    printf("A: %3f, B: %3f, C: %3f, D: %3f", A, B, C, D);
 
-    // 10. 결과 반환 (단위: cm)
-    simd_float3 lidarToCameraOffset = simd_make_float3(
-        t_cam_lidar.at<double>(0),
-        t_cam_lidar.at<double>(1),
-        t_cam_lidar.at<double>(2)
-    );
+//    NSDictionary *vanishingRot = [self computeRotationViaVanishingPoints:imagePoints
+//                                                            cameraMatrix:cameraMatrix];
+    
+//    NSDictionary *lidarRot = [self computeRotationViaLiDAR:measuredPts
+//                                              objectPoints:triPts];
+//    // triPts: std::vector<cv::Point3f> (3D 기준점, 3개)
+//    // imagePoints: std::vector<cv::Point2f> (2D 픽셀점, 3개)
+//    cv::Mat cameraMatrix = (cv::Mat_<double>(3,3) << fx, 0, cx, 0, fy, cy, 0, 0, 1);
+//    cv::Mat rvec = cv::Mat::zeros(3, 1, CV_64F);
+//    cv::Mat tvec = cv::Mat::zeros(3, 1, CV_64F);
+//
+//    // 반드시 플래그와 useExtrinsicGuess를 명시!
+//    cv::solvePnP(
+//        triPts, imagePoints, cameraMatrix, cv::noArray(),
+//        rvec, tvec, true, cv::SOLVEPNP_ITERATIVE
+//    );
+//
+//    cv::Mat R_lidar_world_t = R_lidar.t();
+//    cv::Mat R_cam_lidar = rvec * R_lidar_world_t;
+//    cv::Mat t_cam_lidar = tvec - R_cam_lidar * t_lidar;
+//
+//    // 10. 결과 반환 (단위: cm)
+//    simd_float3 lidarToCameraOffset = simd_make_float3(
+//        t_cam_lidar.at<double>(0),
+//        t_cam_lidar.at<double>(1),
+//        t_cam_lidar.at<double>(2)
+//    );
 
     // 10. LiDAR 위치를 카메라 좌표계로 변환 (필요시)
-    cv::Mat R_cam;
-    cv::Rodrigues(rvec, R_cam);
+//    cv::Mat R_cam;
+//    cv::Rodrigues(rvec, R_cam);
 //    cv::Mat t_lidar_cam = R_cam * t_lidar + tvec;
-    NSMutableDictionary *rotationDict = [NSMutableDictionary dictionary];
-    for (int i = 0; i < 3; i++) {
-        for (int j = 0; j < 3; j++) {
-            NSString *key = [NSString stringWithFormat:@"r%d%d", i, j];
-            rotationDict[key] = @(R_cam.at<double>(i, j));
-        }
-    }
-
+    
+//    cv::Mat R_homo = cv::Mat::zeros(3, 3, CV_64F);
+//    for (int i=0; i<3; i++)
+//        for (int j=0; j<3; j++)
+//            R_homo.at<double>(i, j) = [homographyRot[[NSString stringWithFormat:@"r%d%d", i, j]] doubleValue];
+//
+//    // 2. 평면 법선 벡터 (R의 세 번째 열)
+//    cv::Mat normal = (cv::Mat_<double>(3,1) << R_homo.at<double>(0,2),
+//                                               R_homo.at<double>(1,2),
+//                                               R_homo.at<double>(2,2));
+//    // 3. LiDAR 위치 (이미 3x1 double cv::Mat으로 있다고 가정)
+//    cv::Mat t_lidar_mat = t_lidar; // (3,1) 형태
+    
+    // 4. 평면 방정식 d 계산
+//    double a = normal.at<double>(0);
+//    double b = normal.at<double>(1);
+//    double c = normal.at<double>(2);
+//    double x0 = t_lidar_mat.at<double>(0);
+//    double y0 = t_lidar_mat.at<double>(1);
+//    double z0 = t_lidar_mat.at<double>(2);
+//    double d = -(a*x0 + b*y0 + c*z0);
+    
     // 11. 결과 반환
     return @{
-        @"camera_position": @{
-            @"x": @(tvec.at<double>(0)),
-            @"y": @(tvec.at<double>(1)),
-            @"z": @(tvec.at<double>(2))
-        },
+//        @"camera_position": @{
+//            @"x": @(tvec.at<double>(0)),
+//            @"y": @(tvec.at<double>(1)),
+//            @"z": @(tvec.at<double>(2))
+//        },
         @"lidar_position": @{
             @"x": @(t_lidar.at<double>(0,0)),
             @"y": @(t_lidar.at<double>(1,0)),
             @"z": @(t_lidar.at<double>(2,0))
         },
-        @"rotation_world_to_camera": rotationDict,
+        @"normal": @{ @"x": @(A), @"y": @(B), @"z": @(C) },
+        @"plane_equation": @{ @"a": @(A), @"b": @(B), @"c": @(C), @"d": @(D) },
+//        @"rotation_world_to_camera": rotationDict,
         @"pixel_centers": pixelCenters
     };
 }

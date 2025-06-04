@@ -24,7 +24,7 @@ class LidarSender {
     }
 
     func sendLidarPosition(x: Double, y: Double, z: Double) {
-        let msg = String(format: "%.3f,%.3f,%.3f\n", x, y, z)
+        let msg = String(format: "lidar:%.3f,%.3f,%.3f\n", x, y, z)
         guard let data = msg.data(using: .utf8) else {
             print("[LidarSender] Failed to encode message")
             return
@@ -38,4 +38,19 @@ class LidarSender {
             }
         })
     }
+    func sendPlaneEquation(a: Double, b: Double, c: Double, d: Double) {
+           let msg = String(format: "plane:%.6f,%.6f,%.6f,%.6f\n", a, b, c, d)
+           guard let data = msg.data(using: .utf8) else {
+               print("[LidarSender] Failed to encode plane equation")
+               return
+           }
+           print("[LidarSender] Sending plane: \(msg.trimmingCharacters(in: .whitespacesAndNewlines))")
+           self.connection.send(content: data, completion: .contentProcessed { error in
+               if let error = error {
+                   print("[LidarSender] Plane send error: \(error)")
+               } else {
+                   print("[LidarSender] Plane data sent successfully")
+               }
+           })
+       }
 }

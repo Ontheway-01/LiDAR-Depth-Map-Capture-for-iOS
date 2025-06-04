@@ -23,7 +23,112 @@ struct LidarData {
     let lidarY: Double
     let lidarZ: Double
 }
+struct CameraPosition {
+    let x: Double
+    let y: Double
+    let z: Double
+}
 
+struct LidarPosition {
+    let x: Double
+    let y: Double
+    let z: Double
+}
+
+struct RotationMatrix {
+    let r: [[Double]] // 3x3
+}
+
+struct PixelCenter {
+    let x: Double
+    let y: Double
+    let radius: Double
+}
+
+struct NormalVector {
+    let x: Double
+    let y: Double
+    let z: Double
+}
+
+struct PlaneEquation {
+    let a: Double
+    let b: Double
+    let c: Double
+    let d: Double
+}
+
+
+struct DetectionResult {
+//    let cameraPosition: CameraPosition
+    let lidarPosition: LidarPosition
+    let normal: NormalVector
+    let planeEquation: PlaneEquation
+//    let rotationWorldToCamera: RotationMatrix
+    let pixelCenters: [PixelCenter]
+}
+func parseDetectionResult(_ dict: [String: Any]) -> DetectionResult {
+    // Camera Position
+//    let camDict = dict["camera_position"] as? [String: Any] ?? [:]
+//    let cameraPosition = CameraPosition(
+//        x: camDict["x"] as? Double ?? 0.0,
+//        y: camDict["y"] as? Double ?? 0.0,
+//        z: camDict["z"] as? Double ?? 0.0
+//    )
+
+    // Lidar Position
+    let lidarDict = dict["lidar_position"] as? [String: Any] ?? [:]
+    let lidarPosition = LidarPosition(
+        x: lidarDict["x"] as? Double ?? 0.0,
+        y: lidarDict["y"] as? Double ?? 0.0,
+        z: lidarDict["z"] as? Double ?? 0.0
+    )
+
+    // Rotation Matrix (3x3)
+//    let rotDict = dict["rotation_world_to_camera"] as? [String: Any] ?? [:]
+//    var rMat = [[Double]](repeating: [Double](repeating: 0.0, count: 3), count: 3)
+//    for i in 0..<3 {
+//        for j in 0..<3 {
+//            let key = "r\(i)\(j)"
+//            rMat[i][j] = rotDict[key] as? Double ?? 0.0
+//        }
+//    }
+//    let rotationWorldToCamera = RotationMatrix(r: rMat)
+
+    let normal = dict["normal"] as? [String: Any] ?? [:]
+    let normalVector = NormalVector(
+        x: normal["x"] as? Double ?? 0.0,
+        y: normal["y"] as? Double ?? 0.0,
+        z: normal["z"] as? Double ?? 0.0
+    )
+
+    let plane = dict["plane_equation"] as? [String: Any] ?? [:]
+    let planeEquation = PlaneEquation(
+        a: plane["a"] as? Double ?? 0.0,
+        b: plane["b"] as? Double ?? 0.0,
+        c: plane["c"] as? Double ?? 0.0,
+        d: plane["d"] as? Double ?? 0.0
+    )
+
+    // Pixel Centers
+    let pixelArr = dict["pixel_centers"] as? [[String: Any]] ?? []
+    let pixelCenters = pixelArr.map { p in
+        PixelCenter(
+            x: p["x"] as? Double ?? 0.0,
+            y: p["y"] as? Double ?? 0.0,
+            radius: p["radius"] as? Double ?? 0.0
+        )
+    }
+
+    return DetectionResult(
+//        cameraPosition: cameraPosition,
+        lidarPosition: lidarPosition,
+        normal: normalVector,
+        planeEquation: planeEquation,
+//        rotationWorldToCamera: rotationWorldToCamera,
+        pixelCenters: pixelCenters
+    )
+}
 class ARViewModel: NSObject, ARSessionDelegate, ObservableObject {
     let lidarSender = LidarSender(host: "192.168.0.8", port: 5005)
     private var latestDepthMap: CVPixelBuffer?
@@ -38,6 +143,7 @@ class ARViewModel: NSObject, ARSessionDelegate, ObservableObject {
     private var lidarPosition: LidarData = LidarData(lidarX: 0.0, lidarY: 0.0, lidarZ: 0.0)
     @Published var pixelBufferWidth: Int?
     @Published var pixelBufferHeight: Int?
+    @Published var withCamera:DetectionResult = DetectionResult(/*cameraPosition: CameraPosition(x: 0.0, y: 0.0, z: 0.0),*/ lidarPosition: LidarPosition(x: 0.0, y: 0.0, z: 0.0), normal: NormalVector(x: 0.0, y: 0.0, z: 0.0), planeEquation: PlaneEquation(a: 0.0, b: 0.0, c: 0.0, d: 0.0), /*rotationWorldToCamera: RotationMatrix(r: [[0.0]]),*/ pixelCenters: [PixelCenter(x: 0.0, y: 0.0, radius: 0.0)])
     
     private var lastProcessedTimestamp: TimeInterval = 0
     // 원하는 샘플링 간격(초): 0.05는 20fps, 0.1은 10fps
@@ -84,28 +190,10 @@ class ARViewModel: NSObject, ARSessionDelegate, ObservableObject {
 
 
         DispatchQueue.global(qos: .userInitiated).async {
-            let result = OpenCVWrapper.detectTriangleAndComputePose(with: pixelBuffer, depthBuffer: depthMap, cameraIntrinsic: intrinsicsArray) as? [[String: NSNumber]]
+            let result = OpenCVWrapper.detectTriangleAndComputePose(with: pixelBuffer, depthBuffer: depthMap, cameraIntrinsic: intrinsicsArray) as? [String: Any]
 
-            var circles: [CircleData] = []
-            var lidar: LidarData = LidarData(lidarX: 0.0, lidarY: 0.0, lidarZ: 0.0)
-
-            let cameraPos = result["camera_position"] as! [String: Double]
-            let lidarPos = result["lidar_position"] as! [String: Double]
-
-            // 회전 행렬
-            let rotDict = result["rotation_world_to_camera"] as! [String: Double]
-            var rotationMatrix = [[Double]](repeating: [Double](repeating: 0.0, count: 3), count: 3)
-            for i in 0..<3 {
-                for j in 0..<3 {
-                    rotationMatrix[i][j] = rotDict["r\(i)\(j)"] ?? 0.0
-                }
-            }
-
-            // 픽셀 위치 (동그라미 중심)
-            let pixelCenters = result["pixel_centers"] as! [[String: Double]]
-            let centers: [CGPoint] = pixelCenters.map { dict in
-                CGPoint(x: dict["x"] ?? 0.0, y: dict["y"] ?? 0.0)
-            }
+            let detection = parseDetectionResult(result!)
+            print(detection)
             
 //            results?.forEach { dict in
 //                if let px = dict["pixel_x"]?.doubleValue,
@@ -125,8 +213,9 @@ class ARViewModel: NSObject, ARSessionDelegate, ObservableObject {
 //            }
 
             DispatchQueue.main.async {
-                self.detectedCircles = circles
-                self.lidarPosition = lidar
+                self.withCamera = detection
+//                self.detectedCircles = circles
+//                self.lidarPosition = lidar
 //                self.lidarSender.sendLidarPosition(x: self.lidarPosition.lidarX, y: self.lidarPosition.lidarY, z: self.lidarPosition.lidarZ)
 //                print("LiDAR Coor: (\(self.lidarPosition.lidarX), \(self.lidarPosition.lidarY), \(self.lidarPosition.lidarZ))")                // Print mapping
 //                for (index, circle) in circles.enumerated() {
@@ -177,12 +266,8 @@ class ARViewModel: NSObject, ARSessionDelegate, ObservableObject {
     }
     
     func sendCurrentLidarPosition() {
-        self.lidarSender.sendLidarPosition(
-            x: self.lidarPosition.lidarX,
-            y: self.lidarPosition.lidarY,
-            z: self.lidarPosition.lidarZ
-        )
-        print("Sent LiDAR Coor: (\(self.lidarPosition.lidarX), \(self.lidarPosition.lidarY), \(self.lidarPosition.lidarZ))")
+        self.lidarSender.sendLidarPosition(x: self.withCamera.lidarPosition.x, y: self.withCamera.lidarPosition.y, z: self.withCamera.lidarPosition.z)
+        self.lidarSender.sendPlaneEquation(a: self.withCamera.planeEquation.a, b: self.withCamera.planeEquation.b, c: self.withCamera.planeEquation.c, d: self.withCamera.planeEquation.d)
     }
 
     func saveDepthMap() {
