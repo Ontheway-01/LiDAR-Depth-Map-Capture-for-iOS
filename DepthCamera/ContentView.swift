@@ -7,9 +7,10 @@ import MobileCoreServices
 import CoreGraphics
 import tiff_ios
 
-
-
 struct ContentView : View {
+    @EnvironmentObject var settings: AppSettings
+    @State private var showSettings = false
+
     @StateObject var arViewModel = ARViewModel()
     let previewCornerRadius: CGFloat = 15.0
 
@@ -27,10 +28,14 @@ struct ContentView : View {
                     ARViewContainer(arViewModel: arViewModel)
                         .clipShape(RoundedRectangle(cornerRadius: previewCornerRadius))
                         .frame(width: width, height: height)
-                    CaptureButtonPanelView(model: arViewModel,  width: geometry.size.width)
+                    CaptureButtonPanelView(model: arViewModel,  width: geometry.size.width, showSettings: $showSettings)
 
                 }
             }
+        }
+        .sheet(isPresented: $showSettings){
+            SettingView()
+                .environmentObject(settings)
         }
         .environment(\.colorScheme, .dark)
     }

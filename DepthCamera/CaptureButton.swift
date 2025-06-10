@@ -18,9 +18,10 @@ struct CaptureButton: View {
     static let rootTwoOverTwo: CGFloat = CGFloat(2.0.squareRoot() / 2.0)
     static let squareDiameter: CGFloat = CaptureButton.innerDiameter * CaptureButton.rootTwoOverTwo -
     CaptureButton.innerPadding
-    
+
     @ObservedObject var model: ARViewModel
-    
+    @EnvironmentObject var settings: AppSettings
+
     init(model: ARViewModel) {
         self.model = model
     }
@@ -28,6 +29,7 @@ struct CaptureButton: View {
     
     var body: some View {
         Button(action: {
+            settings.captureCount += 1
             model.sendCurrentLidarPosition()
             model.saveDepthMap()
         },label: {
