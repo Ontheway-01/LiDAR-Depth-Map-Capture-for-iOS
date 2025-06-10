@@ -53,6 +53,7 @@
 /* Begin PBXFileReference section */
 		5003E6E32DF8145E00FF9ED7 /* AppSetting.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSetting.swift; sourceTree = "<group>"; };
 		5003E6E52DF816CB00FF9ED7 /* SettingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingView.swift; sourceTree = "<group>"; };
+		5003E6E72DF820B100FF9ED7 /* ResultModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResultModels.swift; sourceTree = "<group>"; };
 		5010AB4B2DE8382100F93E39 /* opencv2.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = opencv2.framework; sourceTree = "<group>"; };
 		5096E0912DDC479000A5A7E0 /* DepthCamera-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "DepthCamera-Bridging-Header.h"; sourceTree = "<group>"; };
 		5096E0922DDC479000A5A7E0 /* OpenCVWrapper.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = OpenCVWrapper.h; sourceTree = "<group>"; };
@@ -156,6 +157,7 @@
 		89B6171C2B14740A00280111 /* DepthCamera */ = {
 			isa = PBXGroup;
 			children = (
+				5003E6E72DF820B100FF9ED7 /* ResultModels.swift */,
 				5003E6E52DF816CB00FF9ED7 /* SettingView.swift */,
 				5003E6E32DF8145E00FF9ED7 /* AppSetting.swift */,
 				5096E0E02DDCBD0B00A5A7E0 /* LidarSender.swift */,

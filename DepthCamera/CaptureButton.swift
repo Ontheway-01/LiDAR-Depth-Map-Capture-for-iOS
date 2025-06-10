@@ -29,9 +29,11 @@ struct CaptureButton: View {
     
     var body: some View {
         Button(action: {
+            print("click!!!!!!!!!!!!!!!!!!!!")
             settings.captureCount += 1
+            model.setAppSettings(settings)
             model.sendCurrentLidarPosition()
-            model.saveDepthMap()
+//            model.saveDepthMap()
         },label: {
             
             ManualCaptureButtonView()

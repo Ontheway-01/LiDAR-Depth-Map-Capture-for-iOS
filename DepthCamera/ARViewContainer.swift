@@ -12,6 +12,7 @@ import RealityKit
 
 struct ARViewContainer: UIViewRepresentable {
     @ObservedObject var arViewModel: ARViewModel
+    @EnvironmentObject var appSettings: AppSettings
     
     func find4by3VideoFormat() -> ARConfiguration.VideoFormat? {
         let availableFormats = ARWorldTrackingConfiguration.supportedVideoFormats

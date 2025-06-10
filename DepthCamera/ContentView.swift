@@ -34,10 +34,13 @@ struct ContentView : View {
             }
         }
         .sheet(isPresented: $showSettings){
-            SettingView()
+            SettingView(arViewModel: arViewModel)
                 .environmentObject(settings)
         }
         .environment(\.colorScheme, .dark)
+        .onAppear(){
+            arViewModel.setAppSettings(settings)
+        }
     }
 }
 
