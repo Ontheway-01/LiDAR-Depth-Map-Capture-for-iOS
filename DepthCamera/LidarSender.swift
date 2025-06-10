@@ -39,18 +39,48 @@ class LidarSender {
         })
     }
     func sendPlaneEquation(a: Double, b: Double, c: Double, d: Double) {
-           let msg = String(format: "plane:%.6f,%.6f,%.6f,%.6f\n", a, b, c, d)
-           guard let data = msg.data(using: .utf8) else {
-               print("[LidarSender] Failed to encode plane equation")
-               return
-           }
-           print("[LidarSender] Sending plane: \(msg.trimmingCharacters(in: .whitespacesAndNewlines))")
-           self.connection.send(content: data, completion: .contentProcessed { error in
-               if let error = error {
-                   print("[LidarSender] Plane send error: \(error)")
-               } else {
-                   print("[LidarSender] Plane data sent successfully")
-               }
-           })
+       let msg = String(format: "plane:%.6f,%.6f,%.6f,%.6f\n", a, b, c, d)
+       guard let data = msg.data(using: .utf8) else {
+           print("[LidarSender] Failed to encode plane equation")
+           return
        }
+       print("[LidarSender] Sending plane: \(msg.trimmingCharacters(in: .whitespacesAndNewlines))")
+       self.connection.send(content: data, completion: .contentProcessed { error in
+           if let error = error {
+               print("[LidarSender] Plane send error: \(error)")
+           } else {
+               print("[LidarSender] Plane data sent successfully")
+           }
+       })
+   }
+    func sendNormalVector(nx: Double, ny: Double, nz: Double) {
+       let msg = String(format: "normal:%.6f,%.6f,%.6f\n", nx, ny, nz)
+       guard let data = msg.data(using: .utf8) else {
+           print("[LidarSender] Failed to encode plane equation")
+           return
+       }
+       print("[LidarSender] Sending plane: \(msg.trimmingCharacters(in: .whitespacesAndNewlines))")
+       self.connection.send(content: data, completion: .contentProcessed { error in
+           if let error = error {
+               print("[LidarSender] Plane send error: \(error)")
+           } else {
+               print("[LidarSender] Plane data sent successfully")
+           }
+       })
+   }
+    func sendCamera(x: Double, y: Double, z: Double) {
+       let msg = String(format: "camera:%.6f,%.6f,%.6f,%.6f\n", x, y, z)
+       guard let data = msg.data(using: .utf8) else {
+           print("[LidarSender] Failed to encode plane equation")
+           return
+       }
+       print("[LidarSender] Sending plane: \(msg.trimmingCharacters(in: .whitespacesAndNewlines))")
+       self.connection.send(content: data, completion: .contentProcessed { error in
+           if let error = error {
+               print("[LidarSender] Plane send error: \(error)")
+           } else {
+               print("[LidarSender] Plane data sent successfully")
+           }
+       })
+   }
 }

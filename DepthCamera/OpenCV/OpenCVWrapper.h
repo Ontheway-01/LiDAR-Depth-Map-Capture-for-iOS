@@ -33,6 +33,10 @@ NS_ASSUME_NONNULL_BEGIN
 (CVPixelBufferRef)depthBuffer
                                            intrinsicsArray:
 (const float *)intrinsicsArray
+                                              cameraMatrix:
+(const float *)cameraMatrix
+                                           lidarWorldArray:
+(const float *)lidarWorldArray
 ;
 
 @end

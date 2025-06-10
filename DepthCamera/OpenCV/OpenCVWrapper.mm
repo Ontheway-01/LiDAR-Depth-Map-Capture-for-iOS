@@ -456,6 +456,10 @@ cv::Mat eulerAnglesToRotationMatrix(double pitch, double roll, double yaw) {
 (CVPixelBufferRef)depthBuffer
                                            intrinsicsArray:
 (const float *)intrinsicsArray
+                                              cameraMatrix:
+(const float *)cameraMatrix
+                                           lidarWorldArray:
+(const float *)lidarWorldArray
 {
     CVPixelBufferLockBaseAddress(pixelBuffer, 0);
     
@@ -522,7 +526,14 @@ cv::Mat eulerAnglesToRotationMatrix(double pitch, double roll, double yaw) {
                 @"triangle_z": @(0.0f),
                 @"lidar_x": @(0.0f),
                 @"lidar_y": @(0.0f),
-                @"lidar_z": @(0.0f)
+                @"lidar_z": @(0.0f),
+                @"camera_a": @(0.0f),
+                @"camera_b": @(0.0f),
+                @"camera_c": @(0.0f),
+                @"camera_d": @(0.0f),
+                @"camera_x": @(0.0f),
+                @"camera_y": @(0.0f),
+                @"camera_z": @(0.0f)
             };
             [result addObject:dict];
             printf("Less than 3 circles");
@@ -595,6 +606,14 @@ cv::Mat eulerAnglesToRotationMatrix(double pitch, double roll, double yaw) {
     );
     float fx = K(0,0), fy = K(1,1), cx = K(0,2), cy = K(1,2);
     
+    cv::Matx44f cameraPose_world(
+        cameraMatrix[0], cameraMatrix[4], cameraMatrix[8],  cameraMatrix[12],
+        cameraMatrix[1], cameraMatrix[5], cameraMatrix[9],  cameraMatrix[13],
+        cameraMatrix[2], cameraMatrix[6], cameraMatrix[10], cameraMatrix[14],
+        cameraMatrix[3], cameraMatrix[7], cameraMatrix[11], cameraMatrix[15]
+    );
+    cv::Mat lidarPos_world = (cv::Mat_<double>(3,1) <<
+            lidarWorldArray[0], lidarWorldArray[1], lidarWorldArray[2]);
     for (int i = 0; i < 3; i++) {
         int idx = order[i];
         float u = points2DDepth[idx].x;
@@ -615,9 +634,43 @@ cv::Mat eulerAnglesToRotationMatrix(double pitch, double roll, double yaw) {
     };
     cv::Mat R, t;
     rigid_transform_3D(triPts, measuredPts, R, t);
-//    horn_rigid_transform_3D(triPts,measuredPts,R,t);
-//    horn_rigid_transform_3D(triPts,measuredPts,R,t);
     
+    cv::Mat R_inv = R.t();
+    cv::Mat t_inv = -R_inv * t;
+    cv::Mat cameraPos_world = (cv::Mat_<double>(3,1) <<
+        cameraPose_world(0,3), cameraPose_world(1,3), cameraPose_world(2,3));
+    cv::Mat cameraPos_tri = R_inv * (cameraPos_world - t);
+    cv::Mat lidarPos_tri = R_inv * (lidarPos_world - t);
+
+//    horn_rigid_transform_3D(triPts,measuredPts,R,t);
+//    horn_rigid_transform_3D(triPts,measuredPts,R,t);
+    cv::Mat R_cam_world = (cv::Mat_<double>(3,3) <<
+        cameraPose_world(0,0), cameraPose_world(0,1), cameraPose_world(0,2),
+        cameraPose_world(1,0), cameraPose_world(1,1), cameraPose_world(1,2),
+        cameraPose_world(2,0), cameraPose_world(2,1), cameraPose_world(2,2)
+    );
+    cv::Mat R_cam_tri = R_inv * R_cam_world; // 3x3
+    cv::Mat normal_tri = R_cam_tri.col(2); // 3x1
+    
+    double A = normal_tri.at<double>(0);
+    double B = normal_tri.at<double>(1);
+    double C = normal_tri.at<double>(2);
+    double x0 = cameraPos_tri.at<double>(0);
+    double y0 = cameraPos_tri.at<double>(1);
+    double z0 = cameraPos_tri.at<double>(2);
+    double D = -(A * x0 + B * y0 + C * z0);
+//    cv::Point3f camPos_tri(
+//        cameraPose_tri(0,3),
+//        cameraPose_tri(1,3),
+//        cameraPose_tri(2,3)
+//    );
+//    cv::Vec3f normal_tri(
+//        cameraPose_tri(0,2),
+//        cameraPose_tri(1,2),
+//        cameraPose_tri(2,2)
+//    );
+    
+
     for (int i = 0; i < 3; i++) {
         int idx = order[i];
         NSDictionary *dict = @{
@@ -628,9 +681,17 @@ cv::Mat eulerAnglesToRotationMatrix(double pitch, double roll, double yaw) {
             @"triangle_x": @(triangleCoords[i].x),
             @"triangle_y": @(triangleCoords[i].y),
             @"triangle_z": @(triangleCoords[i].z),
-            @"lidar_x": @(t.at<double>(0,0)),
-            @"lidar_y": @(t.at<double>(1,0)),
-            @"lidar_z": @(t.at<double>(2,0))        };
+            @"lidar_x": @(t.at<double>(0)),
+            @"lidar_y": @(t.at<double>(1)),
+            @"lidar_z": @(t.at<double>(2)),
+            @"camera_a": @(A),
+            @"camera_b": @(B),
+            @"camera_c": @(C),
+            @"camera_d": @(D),
+            @"camera_x": @(x0),
+            @"camera_y": @(y0),
+            @"camera_z": @(z0)
+        };
         [result addObject:dict];
         printf("Point %d: pixel (%.2f, %.2f), radius: %f, depth %.3f m, triangle (%.2f, %.2f, %.3f) cm\n",
                i+1,

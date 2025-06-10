@@ -66,7 +66,7 @@ struct ARViewContainer: UIViewRepresentable {
         uiView.layer.sublayers?.removeAll(where: { $0.name == "textOverlay" })
 
 //        for (index, circle) in arViewModel.detectedCircles.enumerated() {
-        for (index, circle) in arViewModel.withCamera.pixelCenters.enumerated() {
+        for (index, circle) in arViewModel.detectedCircles.enumerated() {
             let textLayer = CATextLayer()
                 textLayer.name = "textOverlay"
                 textLayer.string = "\(index + 1)"
@@ -79,8 +79,8 @@ struct ARViewContainer: UIViewRepresentable {
 
             let overlay = CAShapeLayer()
             overlay.name = "circleOverlay"
-            let centerX = (CGFloat(bufferHeight) - CGFloat(circle.y)) * scaleX
-            let centerY = CGFloat(circle.x) * scaleY
+            let centerX = (CGFloat(bufferHeight) - CGFloat(circle.pixelY)) * scaleX
+            let centerY = CGFloat(circle.pixelX) * scaleY
 
             let radius = CGFloat(circle.radius) * ((scaleX + scaleY) / 2)
             
