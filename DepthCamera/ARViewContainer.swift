@@ -32,6 +32,7 @@ struct ARViewContainer: UIViewRepresentable {
         let arView = ARView(frame: .zero)
         
         let configuration = ARWorldTrackingConfiguration()
+        configuration.worldAlignment = .camera
         
         if ARWorldTrackingConfiguration.supportsSceneReconstruction(.meshWithClassification) {
             configuration.sceneReconstruction = .meshWithClassification

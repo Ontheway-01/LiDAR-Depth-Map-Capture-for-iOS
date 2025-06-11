@@ -8,101 +8,9 @@
 import ARKit
 import SwiftUI
 
-struct CircleData {
-    let pixelX: Double
-    let pixelY: Double
-    let radius: Double
-    let depth: Double
-    let triangleX: Double
-    let triangleY: Double
-    let triangleZ: Double
-}
-struct LidarData {
-    let lidarX: Double
-    let lidarY: Double
-    let lidarZ: Double
-}
-struct CameraPosition {
-    let x: Double
-    let y: Double
-    let z: Double
-}
-struct LidarPosition {
-    let x: Double
-    let y: Double
-    let z: Double
-}
-struct RotationMatrix {
-    let r: [[Double]] // 3x3
-}
-struct PixelCenter {
-    let x: Double
-    let y: Double
-    let radius: Double
-}
-struct NormalVector {
-    let x: Double
-    let y: Double
-    let z: Double
-}
-struct PlaneEquation {
-    let a: Double
-    let b: Double
-    let c: Double
-    let d: Double
-}
-struct DetectionResult {
-//    let cameraPosition: CameraPosition
-    let lidarPosition: LidarPosition
-    let normal: NormalVector
-    let planeEquation: PlaneEquation
-//    let rotationWorldToCamera: RotationMatrix
-    let pixelCenters: [PixelCenter]
-}
-func parseDetectionResult(_ dict: [String: Any]) -> DetectionResult {
-    // Lidar Position
-    let lidarDict = dict["lidar_position"] as? [String: Any] ?? [:]
-    let lidarPosition = LidarPosition(
-        x: lidarDict["x"] as? Double ?? 0.0,
-        y: lidarDict["y"] as? Double ?? 0.0,
-        z: lidarDict["z"] as? Double ?? 0.0
-    )
-
-    let normal = dict["normal"] as? [String: Any] ?? [:]
-    let normalVector = NormalVector(
-        x: normal["x"] as? Double ?? 0.0,
-        y: normal["y"] as? Double ?? 0.0,
-        z: normal["z"] as? Double ?? 0.0
-    )
-
-    let plane = dict["plane_equation"] as? [String: Any] ?? [:]
-    let planeEquation = PlaneEquation(
-        a: plane["a"] as? Double ?? 0.0,
-        b: plane["b"] as? Double ?? 0.0,
-        c: plane["c"] as? Double ?? 0.0,
-        d: plane["d"] as? Double ?? 0.0
-    )
-
-    // Pixel Centers
-    let pixelArr = dict["pixel_centers"] as? [[String: Any]] ?? []
-    let pixelCenters = pixelArr.map { p in
-        PixelCenter(
-            x: p["x"] as? Double ?? 0.0,
-            y: p["y"] as? Double ?? 0.0,
-            radius: p["radius"] as? Double ?? 0.0
-        )
-    }
-
-    return DetectionResult(
-        lidarPosition: lidarPosition,
-        normal: normalVector,
-        planeEquation: planeEquation,
-        pixelCenters: pixelCenters
-    )
-}
-
 class ARViewModel: NSObject, ARSessionDelegate, ObservableObject {
-    let lidarSender = LidarSender(host: "192.168.1.216", port: 5005)
+//    let lidarSender = LidarSender(host: "192.168.1.216", port: 5005)
+    let lidarSender = LidarSender(host: "192.168.0.8", port: 5005)
     private var latestDepthMap: CVPixelBuffer?
     private var latestImage: CVPixelBuffer?
     private var latestCameraIntrinsics: simd_float3x3?
@@ -111,10 +19,11 @@ class ARViewModel: NSObject, ARSessionDelegate, ObservableObject {
             print("lastCapture was set.")
         }
     }
-    @Published var detectedCircles: [CircleData] = []
-    private var lidarPosition: LidarData = LidarData(lidarX: 0.0, lidarY: 0.0, lidarZ: 0.0)
-    private var planeEquation: PlaneEquation = PlaneEquation(a: 0.0, b: 0.0, c: 0.0, d: 0.0)
-    private var cameraPosition: CameraPosition = CameraPosition(x: 0.0, y: 0.0, z: 0.0)
+    
+    @Published var detectedCircles: [DetectionModels.CircleData] = []
+    private var lidarPosition: DetectionModels.LidarData = DetectionModels.LidarData(lidarX: 0.0, lidarY: 0.0, lidarZ: 0.0)
+    private var planeEquation: DetectionModels.PlaneEquation = DetectionModels.PlaneEquation(a: 0.0, b: 0.0, c: 0.0, d: 0.0)
+    private var cameraPosition: DetectionModels.CameraPosition = DetectionModels.CameraPosition(x: 0.0, y: 0.0, z: 0.0)
     @Published var pixelBufferWidth: Int?
     @Published var pixelBufferHeight: Int?
     var appSettings: AppSettings? // 옵셔널로 보관
@@ -183,10 +92,10 @@ class ARViewModel: NSObject, ARSessionDelegate, ObservableObject {
         DispatchQueue.global(qos: .userInitiated).async {
             let results = OpenCVWrapper.detectRedCircles(in: pixelBuffer, depthBuffer: depthMap, intrinsicsArray: intrinsicsArray, cameraMatrix: cameraMatrix, lidarWorldArray: lidarWorldArray) as? [[String: NSNumber]]
             print(results)
-            var circles: [CircleData] = []
-            var lidar: LidarData = LidarData(lidarX: 0.0, lidarY: 0.0, lidarZ: 0.0)
-            var plane: PlaneEquation = PlaneEquation(a: 0.0, b: 0.0, c: 0.0, d: 0.0)
-            var cameraPos: CameraPosition = CameraPosition(x: 0.0, y: 0.0, z: 0.0)
+            var circles: [DetectionModels.CircleData] = []
+            var lidar: DetectionModels.LidarData = DetectionModels.LidarData(lidarX: 0.0, lidarY: 0.0, lidarZ: 0.0)
+            var plane: DetectionModels.PlaneEquation = DetectionModels.PlaneEquation(a: 0.0, b: 0.0, c: 0.0, d: 0.0)
+            var cameraPos: DetectionModels.CameraPosition = DetectionModels.CameraPosition(x: 0.0, y: 0.0, z: 0.0)
 
             results?.forEach { dict in
                 if let px = dict["pixel_x"]?.doubleValue,
@@ -207,11 +116,11 @@ class ARViewModel: NSObject, ARSessionDelegate, ObservableObject {
                    let cy = dict["camera_y"]?.doubleValue,
                    let cz = dict["camera_z"]?.doubleValue
                 {
-                    let circle = CircleData(pixelX: px, pixelY: py, radius: radius, depth: depth, triangleX: tx, triangleY: ty, triangleZ: tz)
-                    lidar = LidarData(lidarX: lx, lidarY: ly, lidarZ: lz)
+                    let circle = DetectionModels.CircleData(pixelX: px, pixelY: py, radius: radius, depth: depth, triangleX: tx, triangleY: ty, triangleZ: tz)
+                    lidar = DetectionModels.LidarData(lidarX: lx, lidarY: ly, lidarZ: lz)
                     circles.append(circle)
-                    plane = PlaneEquation(a: ca, b: cb, c: cc, d: cd)
-                    cameraPos = CameraPosition(x: cx, y: cy, z: cz)
+                    plane = DetectionModels.PlaneEquation(a: ca, b: cb, c: cc, d: cd)
+                    cameraPos = DetectionModels.CameraPosition(x: cx, y: cy, z: cz)
                 }
             }
 
@@ -269,14 +178,11 @@ class ARViewModel: NSObject, ARSessionDelegate, ObservableObject {
         saveImage(image: image, url: imageFileURL)
         
         let uiImage = UIImage(ciImage: CIImage(cvPixelBuffer: image))
-        
-        
+            
         DispatchQueue.main.async {
             self.lastCapture = uiImage
         }
-     
-        
-        
+             
         print("Depth map saved to \(depthFileURL)")
         print("Image saved to \(imageFileURL)")
     }
