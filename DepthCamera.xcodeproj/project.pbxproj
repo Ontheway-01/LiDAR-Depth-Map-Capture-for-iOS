@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		5003E6E42DF8146200FF9ED7 /* AppSetting.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5003E6E32DF8145E00FF9ED7 /* AppSetting.swift */; };
 		5003E6E62DF816CE00FF9ED7 /* SettingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5003E6E52DF816CB00FF9ED7 /* SettingView.swift */; };
+		5003E6F62DF8FF4300FF9ED7 /* ResultMdoels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5003E6F52DF8FF3F00FF9ED7 /* ResultMdoels.swift */; };
 		5010AB4C2DE8382100F93E39 /* opencv2.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5010AB4B2DE8382100F93E39 /* opencv2.framework */; };
 		5096E0942DDC479000A5A7E0 /* OpenCVWrapper.mm in Sources */ = {isa = PBXBuildFile; fileRef = 5096E0932DDC479000A5A7E0 /* OpenCVWrapper.mm */; };
 		5096E0E12DDCBD0F00A5A7E0 /* LidarSender.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5096E0E02DDCBD0B00A5A7E0 /* LidarSender.swift */; };
@@ -53,7 +54,7 @@
 /* Begin PBXFileReference section */
 		5003E6E32DF8145E00FF9ED7 /* AppSetting.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSetting.swift; sourceTree = "<group>"; };
 		5003E6E52DF816CB00FF9ED7 /* SettingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingView.swift; sourceTree = "<group>"; };
-		5003E6E72DF820B100FF9ED7 /* ResultModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResultModels.swift; sourceTree = "<group>"; };
+		5003E6F52DF8FF3F00FF9ED7 /* ResultMdoels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResultMdoels.swift; sourceTree = "<group>"; };
 		5010AB4B2DE8382100F93E39 /* opencv2.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = opencv2.framework; sourceTree = "<group>"; };
 		5096E0912DDC479000A5A7E0 /* DepthCamera-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "DepthCamera-Bridging-Header.h"; sourceTree = "<group>"; };
 		5096E0922DDC479000A5A7E0 /* OpenCVWrapper.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = OpenCVWrapper.h; sourceTree = "<group>"; };
@@ -157,7 +158,7 @@
 		89B6171C2B14740A00280111 /* DepthCamera */ = {
 			isa = PBXGroup;
 			children = (
-				5003E6E72DF820B100FF9ED7 /* ResultModels.swift */,
+				5003E6F52DF8FF3F00FF9ED7 /* ResultMdoels.swift */,
 				5003E6E52DF816CB00FF9ED7 /* SettingView.swift */,
 				5003E6E32DF8145E00FF9ED7 /* AppSetting.swift */,
 				5096E0E02DDCBD0B00A5A7E0 /* LidarSender.swift */,
@@ -472,6 +473,7 @@
 			files = (
 				899DD7092CF7130A004FE108 /* CaptureButtonPanelView.swift in Sources */,
 				899DD7112CF713AC004FE108 /* ManualCaptureButtonView.swift in Sources */,
+				5003E6F62DF8FF4300FF9ED7 /* ResultMdoels.swift in Sources */,
 				899DD7032CF71263004FE108 /* ARViewModel.swift in Sources */,
 				5003E6E62DF816CE00FF9ED7 /* SettingView.swift in Sources */,
 				899DD7072CF712D2004FE108 /* ThumbnailImageView.swift in Sources */,

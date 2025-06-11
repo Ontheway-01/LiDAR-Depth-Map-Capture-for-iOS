@@ -592,8 +592,8 @@ cv::Mat eulerAnglesToRotationMatrix(double pitch, double roll, double yaw) {
     // point_y: (2, 2*sqrt(3), 0)
     struct TriCoord { float x, y, z; };
     std::vector<TriCoord> triangleCoords;
-    triangleCoords.push_back({0.0f, 0.0f, 0.0f});
-    triangleCoords.push_back({4.0f, 0.0f,  0.0f});
+    triangleCoords.push_back({4.0f, 0.0f, 0.0f});
+    triangleCoords.push_back({0.0f, 0.0f,  0.0f});
     triangleCoords.push_back({2.0f, 2.0f * std::sqrt(3.0f), 0.0f});
     
     std::vector<int> order = {originIndex, pointXIndex, pointYIndex};
@@ -628,12 +628,24 @@ cv::Mat eulerAnglesToRotationMatrix(double pitch, double roll, double yaw) {
         measuredPts.push_back(cv::Point3f(X, Y, Z));
     }
     std::vector<cv::Point3f> triPts = {
-        {0.0f, 0.0f, 0.0f},
         {4.0f, 0.0f, 0.0f},
+        {0.0f, 0.0f, 0.0f},
         {2.0f, 2.0f * std::sqrt(3.0f), 0.0f}
     };
+    
+    std::vector<cv::Point3f> measuredPts_world;
+    for (int i = 0; i < 3; ++i) {
+        cv::Mat pt_cam = (cv::Mat_<double>(4,1) << measuredPts[i].x, measuredPts[i].y, measuredPts[i].z, 1.0);
+        cv::Mat pt_world = cameraPose_world * pt_cam; // 4x1
+        measuredPts_world.push_back(cv::Point3f(
+            pt_world.at<double>(0,0),
+            pt_world.at<double>(1,0),
+            pt_world.at<double>(2,0)
+        ));
+    }
+    
     cv::Mat R, t;
-    rigid_transform_3D(triPts, measuredPts, R, t);
+    rigid_transform_3D(triPts, measuredPts_world, R, t);
     
     cv::Mat R_inv = R.t();
     cv::Mat t_inv = -R_inv * t;
