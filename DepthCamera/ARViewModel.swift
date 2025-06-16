@@ -9,8 +9,8 @@ import ARKit
 import SwiftUI
 
 class ARViewModel: NSObject, ARSessionDelegate, ObservableObject {
-//    let lidarSender = LidarSender(host: "192.168.1.216", port: 5005)
-    let lidarSender = LidarSender(host: "192.168.0.8", port: 5005)
+    let lidarSender = LidarSender(host: "192.168.1.216", port: 5005)
+//    let lidarSender = LidarSender(host: "192.168.0.8", port: 5005)
     private var latestDepthMap: CVPixelBuffer?
     private var latestImage: CVPixelBuffer?
     private var latestCameraIntrinsics: simd_float3x3?
@@ -24,6 +24,8 @@ class ARViewModel: NSObject, ARSessionDelegate, ObservableObject {
     private var lidarPosition: DetectionModels.LidarData = DetectionModels.LidarData(lidarX: 0.0, lidarY: 0.0, lidarZ: 0.0)
     private var planeEquation: DetectionModels.PlaneEquation = DetectionModels.PlaneEquation(a: 0.0, b: 0.0, c: 0.0, d: 0.0)
     private var cameraPosition: DetectionModels.CameraPosition = DetectionModels.CameraPosition(x: 0.0, y: 0.0, z: 0.0)
+    private var quaternion: DetectionModels.Quaternion = DetectionModels.Quaternion(quatW: 0.0, quatX: 0.0, quatY: 0.0, quatZ: 0.0)
+
     @Published var pixelBufferWidth: Int?
     @Published var pixelBufferHeight: Int?
     var appSettings: AppSettings? // 옵셔널로 보관
@@ -90,13 +92,25 @@ class ARViewModel: NSObject, ARSessionDelegate, ObservableObject {
 
 
         DispatchQueue.global(qos: .userInitiated).async {
-            let results = OpenCVWrapper.detectRedCircles(in: pixelBuffer, depthBuffer: depthMap, intrinsicsArray: intrinsicsArray, cameraMatrix: cameraMatrix, lidarWorldArray: lidarWorldArray) as? [[String: NSNumber]]
-            print(results)
+            var results:[[String: NSNumber]]?
+            if (self.appSettings?.mode == .three){
+                results = OpenCVWrapper.detectTriangleRedCircles(in: pixelBuffer, depthBuffer: depthMap, intrinsicsArray: intrinsicsArray, cameraMatrix: cameraMatrix, lidarWorldArray: lidarWorldArray) as? [[String: NSNumber]]
+                print(results)
+            }
+            else if (self.appSettings?.mode == .fourOne){
+                results = OpenCVWrapper.detectRectangleRedCircles(in: pixelBuffer, depthBuffer: depthMap, intrinsicsArray: intrinsicsArray, cameraMatrix: cameraMatrix, lidarWorldArray: lidarWorldArray) as? [[String: NSNumber]]
+                print(results)
+            }
+            else if (self.appSettings?.mode == .six){
+                results = OpenCVWrapper.detectHexRedCircles(in: pixelBuffer, depthBuffer: depthMap, intrinsicsArray: intrinsicsArray, cameraMatrix: cameraMatrix, lidarWorldArray: lidarWorldArray) as? [[String: NSNumber]]
+                print(results)
+            }
+            
             var circles: [DetectionModels.CircleData] = []
             var lidar: DetectionModels.LidarData = DetectionModels.LidarData(lidarX: 0.0, lidarY: 0.0, lidarZ: 0.0)
             var plane: DetectionModels.PlaneEquation = DetectionModels.PlaneEquation(a: 0.0, b: 0.0, c: 0.0, d: 0.0)
             var cameraPos: DetectionModels.CameraPosition = DetectionModels.CameraPosition(x: 0.0, y: 0.0, z: 0.0)
-
+            var quat: DetectionModels.Quaternion = DetectionModels.Quaternion(quatW: 0.0, quatX: 0.0, quatY: 0.0, quatZ: 0.0)
             results?.forEach { dict in
                 if let px = dict["pixel_x"]?.doubleValue,
                    let py = dict["pixel_y"]?.doubleValue,
@@ -114,13 +128,18 @@ class ARViewModel: NSObject, ARSessionDelegate, ObservableObject {
                    let cd = dict["camera_d"]?.doubleValue,
                    let cx = dict["camera_x"]?.doubleValue,
                    let cy = dict["camera_y"]?.doubleValue,
-                   let cz = dict["camera_z"]?.doubleValue
+                   let cz = dict["camera_z"]?.doubleValue,
+                   let qw = dict["quat_w"]?.doubleValue,
+                   let qx = dict["quat_x"]?.doubleValue,
+                   let qy = dict["quat_y"]?.doubleValue,
+                   let qz = dict["quat_z"]?.doubleValue
                 {
                     let circle = DetectionModels.CircleData(pixelX: px, pixelY: py, radius: radius, depth: depth, triangleX: tx, triangleY: ty, triangleZ: tz)
                     lidar = DetectionModels.LidarData(lidarX: lx, lidarY: ly, lidarZ: lz)
                     circles.append(circle)
                     plane = DetectionModels.PlaneEquation(a: ca, b: cb, c: cc, d: cd)
                     cameraPos = DetectionModels.CameraPosition(x: cx, y: cy, z: cz)
+                    quat = DetectionModels.Quaternion(quatW: qw, quatX: qx, quatY: qy, quatZ: qz)
                 }
             }
 
@@ -129,15 +148,26 @@ class ARViewModel: NSObject, ARSessionDelegate, ObservableObject {
                 self.lidarPosition = lidar
                 self.planeEquation = plane
                 self.cameraPosition = cameraPos
+                self.quaternion = quat
             }
         }
     }
 
     func sendCurrentLidarPosition() {
         print("send!!!!!!!!!!!!!!!!!!!!!!!")
+        if (self.appSettings?.mode == .three){
+            self.lidarSender.sendType(type: "three")
+        }
+        else if (self.appSettings?.mode == .fourOne){
+            self.lidarSender.sendType(type: "four")
+        }
+        else if (self.appSettings?.mode == .six){
+            self.lidarSender.sendType(type: "six")
+        }
         self.lidarSender.sendLidarPosition(x: self.lidarPosition.lidarX, y: self.lidarPosition.lidarY, z: self.lidarPosition.lidarZ)
         self.lidarSender.sendNormalVector(nx: self.planeEquation.a, ny: self.planeEquation.b, nz: self.planeEquation.c)
         self.lidarSender.sendCamera(x: self.cameraPosition.x, y: self.cameraPosition.y, z: self.cameraPosition.z)
+        self.lidarSender.sendQuatd(w: self.quaternion.quatW, x: self.quaternion.quatX, y: self.quaternion.quatY, z: self.quaternion.quatZ)
     }
 
     func saveDepthMap() {

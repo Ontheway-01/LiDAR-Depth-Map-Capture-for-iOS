@@ -12,6 +12,8 @@
 #import <CoreVideo/CoreVideo.h>
 #import <opencv2/imgcodecs/ios.h>
 #import <opencv2/calib3d.hpp>
+#include <opencv2/core/quaternion.hpp>
+
 @implementation OpenCVWrapper
 
 //from here triangle's vertex: red, green, blue
@@ -277,9 +279,6 @@ cv::Mat eulerAnglesToRotationMatrix(double pitch, double roll, double yaw) {
         intrinsics[0], intrinsics[3], intrinsics[6],
         intrinsics[1], intrinsics[4], intrinsics[7],
         intrinsics[2], intrinsics[5], intrinsics[8]);
-//    NSDictionary *homographyRot = [self computeRotationViaHomography:imagePoints
-//                                                        objectPoints:triPts
-//                                                        cameraMatrix:cameraMatrix];
     std::vector<cv::Point3d> triPts3D = {
         {0.0f, 0.0f, 0.0f},
         {4.0f, 0.0f, 0.0f},
@@ -292,10 +291,6 @@ cv::Mat eulerAnglesToRotationMatrix(double pitch, double roll, double yaw) {
     };
     std::vector<cv::Mat> rvecs, tvecs;
     cv::Mat rvec, tvec; // 이동 벡터 초기값 (0)
-//    cv::Mat rvec = cv::Mat::zeros(3, 1, CV_64F);
-//    cv::Mat tvec = cv::Mat::zeros(3, 1, CV_64F);
-//    cv::Mat cam_rvec, cam_tvec;
-//    bool success = cv::solvePnPGeneric(triPts, imagePoints, cameraMatrix, cv::noArray(), rvec, tvec, true, cv::SOLVEPNP_ITERATIVE);
     cv::solveP3P(triPts, imagePoints, cameraMatrix, cv::noArray(), rvecs, tvecs, cv::SOLVEPNP_P3P);
     if (rvecs.empty() || tvecs.empty()){
         printf("failed");
@@ -304,11 +299,6 @@ cv::Mat eulerAnglesToRotationMatrix(double pitch, double roll, double yaw) {
             [pixelCenterss addObject:@{@"x": @(0.0f), @"y": @(0.0f), @"radius": @(0.0f)}];
         }
         return @{
-    //        @"camera_position": @{
-    //            @"x": @(tvec.at<double>(0)),
-    //            @"y": @(tvec.at<double>(1)),
-    //            @"z": @(tvec.at<double>(2))
-    //        },
             @"lidar_position": @{
                 @"x": @(0.0f),
                 @"y": @(0.0f),
@@ -316,33 +306,14 @@ cv::Mat eulerAnglesToRotationMatrix(double pitch, double roll, double yaw) {
             },
             @"normal": @{ @"x": @(0.0f), @"y": @(0.0f), @"z": @(0.0f) },
             @"plane_equation": @{ @"a": @(0.0f), @"b": @(0.0f), @"c": @(0.0f), @"d": @(0.0f) },
-    //        @"rotation_world_to_camera": rotationDict,
             @"pixel_centers": pixelCenterss
         };
     }
-//    if (success) {
-//        cam_rvec = rvec;
-//        cam_tvec = tvec;
-//    }
     cv::Point3f lidarPos(t_lidar.at<double>(0,0), t_lidar.at<double>(1,0), t_lidar.at<double>(2,0));
     cv::Point3f vertex1(0.0f, 0.0f, 0.0f);
     double lidarDepth = cv::norm(lidarPos - vertex1);
 
     if (!rvecs.empty()) {
-        // 여러 해 중 LiDAR 깊이와 가장 가까운 해 선택
-//        int bestIdx = 0;
-//        double minDepthDiff = std::numeric_limits<double>::max();
-//        for (size_t i = 0; i < tvecs.size(); ++i) {
-//            double distance = cv::norm(tvecs[i]);
-//            double diff = std::abs(distance - points2DDepth[0].depth); // lidarDepth는 실제 깊이
-//            if (diff < minDepthDiff) {
-//                minDepthDiff = diff;
-//                bestIdx = i;
-//            }
-//        }
-//        rvec = rvecs[bestIdx];
-//        tvec = tvecs[bestIdx];
-//        // rvec, tvec이 최종 카메라 포즈
         int bestIdx = -1;
         double minDiff = std::numeric_limits<double>::max();
         for (size_t i = 0; i < tvecs.size(); ++i) {
@@ -375,68 +346,9 @@ cv::Mat eulerAnglesToRotationMatrix(double pitch, double roll, double yaw) {
                  B * tvec.at<double>(1) +
                  C * tvec.at<double>(2));
     printf("A: %3f, B: %3f, C: %3f, D: %3f", A, B, C, D);
-
-//    NSDictionary *vanishingRot = [self computeRotationViaVanishingPoints:imagePoints
-//                                                            cameraMatrix:cameraMatrix];
-    
-//    NSDictionary *lidarRot = [self computeRotationViaLiDAR:measuredPts
-//                                              objectPoints:triPts];
-//    // triPts: std::vector<cv::Point3f> (3D 기준점, 3개)
-//    // imagePoints: std::vector<cv::Point2f> (2D 픽셀점, 3개)
-//    cv::Mat cameraMatrix = (cv::Mat_<double>(3,3) << fx, 0, cx, 0, fy, cy, 0, 0, 1);
-//    cv::Mat rvec = cv::Mat::zeros(3, 1, CV_64F);
-//    cv::Mat tvec = cv::Mat::zeros(3, 1, CV_64F);
-//
-//    // 반드시 플래그와 useExtrinsicGuess를 명시!
-//    cv::solvePnP(
-//        triPts, imagePoints, cameraMatrix, cv::noArray(),
-//        rvec, tvec, true, cv::SOLVEPNP_ITERATIVE
-//    );
-//
-//    cv::Mat R_lidar_world_t = R_lidar.t();
-//    cv::Mat R_cam_lidar = rvec * R_lidar_world_t;
-//    cv::Mat t_cam_lidar = tvec - R_cam_lidar * t_lidar;
-//
-//    // 10. 결과 반환 (단위: cm)
-//    simd_float3 lidarToCameraOffset = simd_make_float3(
-//        t_cam_lidar.at<double>(0),
-//        t_cam_lidar.at<double>(1),
-//        t_cam_lidar.at<double>(2)
-//    );
-
-    // 10. LiDAR 위치를 카메라 좌표계로 변환 (필요시)
-//    cv::Mat R_cam;
-//    cv::Rodrigues(rvec, R_cam);
-//    cv::Mat t_lidar_cam = R_cam * t_lidar + tvec;
-    
-//    cv::Mat R_homo = cv::Mat::zeros(3, 3, CV_64F);
-//    for (int i=0; i<3; i++)
-//        for (int j=0; j<3; j++)
-//            R_homo.at<double>(i, j) = [homographyRot[[NSString stringWithFormat:@"r%d%d", i, j]] doubleValue];
-//
-//    // 2. 평면 법선 벡터 (R의 세 번째 열)
-//    cv::Mat normal = (cv::Mat_<double>(3,1) << R_homo.at<double>(0,2),
-//                                               R_homo.at<double>(1,2),
-//                                               R_homo.at<double>(2,2));
-//    // 3. LiDAR 위치 (이미 3x1 double cv::Mat으로 있다고 가정)
-//    cv::Mat t_lidar_mat = t_lidar; // (3,1) 형태
-    
-    // 4. 평면 방정식 d 계산
-//    double a = normal.at<double>(0);
-//    double b = normal.at<double>(1);
-//    double c = normal.at<double>(2);
-//    double x0 = t_lidar_mat.at<double>(0);
-//    double y0 = t_lidar_mat.at<double>(1);
-//    double z0 = t_lidar_mat.at<double>(2);
-//    double d = -(a*x0 + b*y0 + c*z0);
     
     // 11. 결과 반환
     return @{
-//        @"camera_position": @{
-//            @"x": @(tvec.at<double>(0)),
-//            @"y": @(tvec.at<double>(1)),
-//            @"z": @(tvec.at<double>(2))
-//        },
         @"lidar_position": @{
             @"x": @(t_lidar.at<double>(0,0)),
             @"y": @(t_lidar.at<double>(1,0)),
@@ -450,7 +362,7 @@ cv::Mat eulerAnglesToRotationMatrix(double pitch, double roll, double yaw) {
 }
 
 //from here triangle's vertex: red
-+ (NSArray<NSDictionary *> *)detectRedCirclesInPixelBuffer:
++ (NSArray<NSDictionary *> *)detectTriangleRedCirclesInPixelBuffer:
 (CVPixelBufferRef)pixelBuffer
                                                depthBuffer:
 (CVPixelBufferRef)depthBuffer
@@ -612,6 +524,8 @@ cv::Mat eulerAnglesToRotationMatrix(double pitch, double roll, double yaw) {
         cameraMatrix[2], cameraMatrix[6], cameraMatrix[10], cameraMatrix[14],
         cameraMatrix[3], cameraMatrix[7], cameraMatrix[11], cameraMatrix[15]
     );
+    // (2, -15, 0)의 오프셋 (단위: 카메라 좌표계, cm라면 변환 필요)
+
     cv::Mat lidarPos_world = (cv::Mat_<double>(3,1) <<
             lidarWorldArray[0], lidarWorldArray[1], lidarWorldArray[2]);
     for (int i = 0; i < 3; i++) {
@@ -632,18 +546,23 @@ cv::Mat eulerAnglesToRotationMatrix(double pitch, double roll, double yaw) {
         {0.0f, 0.0f, 0.0f},
         {2.0f, 2.0f * std::sqrt(3.0f), 0.0f}
     };
+    cv::Mat offset_cam = (cv::Mat_<float>(4,1) << 0.02f, -0.15f, 0.0f, 1.0f);
+    // 카메라 pose를 float로 사용 중이므로, Matx44f → Mat 변환
+    cv::Mat offset_world = cv::Mat(cameraPose_world) * offset_cam; // 4x1
     
     std::vector<cv::Point3f> measuredPts_world;
     for (int i = 0; i < 3; ++i) {
-        cv::Mat pt_cam = (cv::Mat_<double>(4,1) << measuredPts[i].x, measuredPts[i].y, measuredPts[i].z, 1.0);
-        cv::Mat pt_world = cameraPose_world * pt_cam; // 4x1
+        // pt_cam을 float로 생성
+        cv::Mat pt_cam = (cv::Mat_<float>(4,1) << measuredPts[i].x, measuredPts[i].y, measuredPts[i].z, 1.0f);
+        // cameraPose_world가 cv::Matx44f라면 Mat으로 변환해서 곱셈
+        cv::Mat pt_world = cv::Mat(cameraPose_world) * pt_cam; // 4x1
         measuredPts_world.push_back(cv::Point3f(
-            pt_world.at<double>(0,0),
-            pt_world.at<double>(1,0),
-            pt_world.at<double>(2,0)
+            pt_world.at<float>(0,0),
+            pt_world.at<float>(1,0),
+            pt_world.at<float>(2,0)
         ));
     }
-    
+
     cv::Mat R, t;
     rigid_transform_3D(triPts, measuredPts_world, R, t);
     
@@ -653,6 +572,9 @@ cv::Mat eulerAnglesToRotationMatrix(double pitch, double roll, double yaw) {
         cameraPose_world(0,3), cameraPose_world(1,3), cameraPose_world(2,3));
     cv::Mat cameraPos_tri = R_inv * (cameraPos_world - t);
     cv::Mat lidarPos_tri = R_inv * (lidarPos_world - t);
+    cv::Mat offsetPos_world =(cv::Mat_<double>(3,1) <<
+      offset_world.at<double>(0), offset_world.at<double>(1), offset_world.at<double>(2));
+    cv::Mat offset_tri = R_inv * (offsetPos_world - t);
 
 //    horn_rigid_transform_3D(triPts,measuredPts,R,t);
 //    horn_rigid_transform_3D(triPts,measuredPts,R,t);
@@ -662,6 +584,8 @@ cv::Mat eulerAnglesToRotationMatrix(double pitch, double roll, double yaw) {
         cameraPose_world(2,0), cameraPose_world(2,1), cameraPose_world(2,2)
     );
     cv::Mat R_cam_tri = R_inv * R_cam_world; // 3x3
+    cv::Mat R_tri_cam = R_cam_tri.t();
+    cv::Quatd quat = cv::Quatd::createFromRotMat(R_tri_cam);
     cv::Mat normal_tri = R_cam_tri.col(2); // 3x1
     
     double A = normal_tri.at<double>(0);
@@ -671,18 +595,7 @@ cv::Mat eulerAnglesToRotationMatrix(double pitch, double roll, double yaw) {
     double y0 = cameraPos_tri.at<double>(1);
     double z0 = cameraPos_tri.at<double>(2);
     double D = -(A * x0 + B * y0 + C * z0);
-//    cv::Point3f camPos_tri(
-//        cameraPose_tri(0,3),
-//        cameraPose_tri(1,3),
-//        cameraPose_tri(2,3)
-//    );
-//    cv::Vec3f normal_tri(
-//        cameraPose_tri(0,2),
-//        cameraPose_tri(1,2),
-//        cameraPose_tri(2,2)
-//    );
     
-
     for (int i = 0; i < 3; i++) {
         int idx = order[i];
         NSDictionary *dict = @{
@@ -702,7 +615,11 @@ cv::Mat eulerAnglesToRotationMatrix(double pitch, double roll, double yaw) {
             @"camera_d": @(D),
             @"camera_x": @(x0),
             @"camera_y": @(y0),
-            @"camera_z": @(z0)
+            @"camera_z": @(z0),
+            @"quat_w": @(quat.w),
+            @"quat_x": @(quat.x),
+            @"quat_y": @(quat.y),
+            @"quat_z": @(quat.z)
         };
         [result addObject:dict];
         printf("Point %d: pixel (%.2f, %.2f), radius: %f, depth %.3f m, triangle (%.2f, %.2f, %.3f) cm\n",
@@ -718,6 +635,676 @@ cv::Mat eulerAnglesToRotationMatrix(double pitch, double roll, double yaw) {
     
     return result;
 }
++ (NSArray<NSDictionary *> *)detectRectangleRedCirclesInPixelBuffer:
+(CVPixelBufferRef)pixelBuffer
+                                               depthBuffer:
+(CVPixelBufferRef)depthBuffer
+                                           intrinsicsArray:
+(const float *)intrinsicsArray
+                                              cameraMatrix:
+(const float *)cameraMatrix
+                                           lidarWorldArray:
+(const float *)lidarWorldArray
+{
+    CVPixelBufferLockBaseAddress(pixelBuffer, 0);
+    
+    size_t rgbWidth = CVPixelBufferGetWidth(pixelBuffer);
+    size_t rgbHeight = CVPixelBufferGetHeight(pixelBuffer);
+    
+    printf("width: %zu", rgbWidth);
+    printf("height: %zu", rgbHeight);
+    
+    uint8_t *yPlane = (uint8_t *)CVPixelBufferGetBaseAddressOfPlane(pixelBuffer, 0);
+    uint8_t *uvPlane = (uint8_t *)CVPixelBufferGetBaseAddressOfPlane(pixelBuffer, 1);
+    
+    size_t yPitch = CVPixelBufferGetBytesPerRowOfPlane(pixelBuffer, 0);
+    size_t uvPitch = CVPixelBufferGetBytesPerRowOfPlane(pixelBuffer, 1);
+    
+    cv::Mat yMat((int)rgbHeight, (int)rgbWidth, CV_8UC1, yPlane, yPitch);
+    cv::Mat uvMat((int)rgbHeight/2, (int)rgbWidth/2, CV_8UC2, uvPlane, uvPitch);
+    
+    cv::Mat yuvMat((int)(rgbHeight * 3 / 2), (int)rgbWidth, CV_8UC1);
+    memcpy(yuvMat.data, yMat.data, rgbWidth * rgbHeight);
+    memcpy(yuvMat.data + rgbWidth * rgbHeight, uvMat.data, rgbWidth * rgbHeight / 2);
+    
+    cv::Mat bgrMat;
+    cv::cvtColor(yuvMat, bgrMat, cv::COLOR_YUV2BGR_NV12);
+    
+    CVPixelBufferUnlockBaseAddress(pixelBuffer, 0);
+    
+    cv::Mat hsvMat;
+    cv::cvtColor(bgrMat, hsvMat, cv::COLOR_BGR2HSV);
+    
+    cv::Mat lowerRedMask, upperRedMask, redMask;
+    cv::inRange(hsvMat, cv::Scalar(0, 150, 120), cv::Scalar(10, 255, 255), lowerRedMask);
+    cv::inRange(hsvMat, cv::Scalar(160, 150, 120), cv::Scalar(179, 255, 255), upperRedMask);
+    cv::addWeighted(lowerRedMask, 1.0, upperRedMask, 1.0, 0.0, redMask);
+    
+    cv::GaussianBlur(redMask, redMask, cv::Size(9, 9), 2, 2);
+    
+    std::vector<cv::Vec3f> circles;
+//    cv::HoughCircles(redMask, circles, cv::HOUGH_GRADIENT, 1, redMask.rows/8, 100, 30, 0, 0);
+    cv::HoughCircles(redMask, circles, cv::HOUGH_GRADIENT, 1, redMask.rows/8, 100, 20, 0, 0);
+
+    
+    CVPixelBufferLockBaseAddress(depthBuffer, kCVPixelBufferLock_ReadOnly);
+    float *depthBase = (float *)CVPixelBufferGetBaseAddress(depthBuffer);
+    int depthBytesPerRow = CVPixelBufferGetBytesPerRow(depthBuffer) / sizeof(float);
+    size_t depthWidth = CVPixelBufferGetWidth(depthBuffer);
+    size_t depthHeight = CVPixelBufferGetHeight(depthBuffer);
+    cv::Mat depthMat(depthHeight, depthWidth, CV_32FC1, depthBase, depthBytesPerRow * sizeof(float));
+    CVPixelBufferUnlockBaseAddress(depthBuffer, kCVPixelBufferLock_ReadOnly);
+    
+    NSMutableArray<NSDictionary *> *result = [NSMutableArray array];
+    int maxCircles = (int)std::min(4, (int)circles.size());
+    if (maxCircles < 4) {
+        printf("Less than 4 circles detected.\n");
+        for (int i = 0; i < maxCircles; i++) {
+            
+            NSDictionary *dict = @{
+                @"pixel_x": @(0.0f),
+                @"pixel_y": @(0.0f),
+                @"radius": @(0.0f),
+                @"depth": @(0.0f),
+                @"triangle_x": @(0.0f),
+                @"triangle_y": @(0.0f),
+                @"triangle_z": @(0.0f),
+                @"lidar_x": @(0.0f),
+                @"lidar_y": @(0.0f),
+                @"lidar_z": @(0.0f),
+                @"camera_a": @(0.0f),
+                @"camera_b": @(0.0f),
+                @"camera_c": @(0.0f),
+                @"camera_d": @(0.0f),
+                @"camera_x": @(0.0f),
+                @"camera_y": @(0.0f),
+                @"camera_z": @(0.0f)
+            };
+            [result addObject:dict];
+            printf("Less than 4 circles");
+        }
+        return result;
+    }
+    
+    // 1. 원들의 x,y 좌표와 depth 저장
+    struct CircleInfo {
+        float x, y, radius, depth;
+    };
+    std::vector<CircleInfo> points2DDepth;
+    for (int i = 0; i < maxCircles; i++) {
+        float x = circles[i][0];
+        float y = circles[i][1];
+        float radius = circles[i][2];
+        
+        int dx = (int)round(x * ((float)depthWidth / rgbWidth));
+        int dy = (int)round(y * ((float)depthHeight / rgbHeight));
+        
+        float depth = 0.0f;
+        if (dx >= 0 && dx < depthWidth && dy >= 0 && dy < depthHeight) {
+            depth = depthMat.at<float>(dy, dx);
+        }
+        
+        points2DDepth.push_back({x, y, radius, depth * 100.0f});
+    }
+    
+    std::vector<int> indices(4);
+    for (int i = 0; i < 4; ++i) indices[i] = i;
+
+    // 1. x+y 합이 가장 작은 점 (왼쪽 위)
+    int firstIdx = 0;
+    float minSum = points2DDepth[0].x + points2DDepth[0].y;
+    for (int i = 1; i < 4; ++i) {
+        float sum = points2DDepth[i].x + points2DDepth[i].y;
+        if (sum < minSum) {
+            minSum = sum;
+            firstIdx = i;
+        }
+    }
+
+    // 2. 첫번째 픽셀과 x값 차이가 가장 적은 점
+    int minXIdx = -1;
+    float minXDiff = std::numeric_limits<float>::max();
+    for (int i = 0; i < 4; ++i) {
+        if (i == firstIdx) continue;
+        float diff = std::abs(points2DDepth[i].x - points2DDepth[firstIdx].x);
+        if (diff < minXDiff) {
+            minXDiff = diff;
+            minXIdx = i;
+        }
+    }
+
+    // 3. x+y 합이 가장 큰 점 (오른쪽 아래)
+    int maxSumIdx = 0;
+    float maxSum = points2DDepth[0].x + points2DDepth[0].y;
+    for (int i = 1; i < 4; ++i) {
+        float sum = points2DDepth[i].x + points2DDepth[i].y;
+        if (sum > maxSum) {
+            maxSum = sum;
+            maxSumIdx = i;
+        }
+    }
+
+    // 4. 첫번째 픽셀과 y값 차이가 가장 적은 점
+    int minYIdx = -1;
+    float minYDiff = std::numeric_limits<float>::max();
+    for (int i = 0; i < 4; ++i) {
+        if (i == firstIdx) continue;
+        float diff = std::abs(points2DDepth[i].y - points2DDepth[firstIdx].y);
+        if (diff < minYDiff) {
+            minYDiff = diff;
+            minYIdx = i;
+        }
+    }
+
+    // 중복 제거 (minXIdx, maxSumIdx, minYIdx가 겹칠 수 있음)
+    std::vector<int> order;
+    order.push_back(firstIdx);
+    if (std::find(order.begin(), order.end(), minXIdx) == order.end()) order.push_back(minXIdx);
+    if (std::find(order.begin(), order.end(), maxSumIdx) == order.end()) order.push_back(maxSumIdx);
+    if (std::find(order.begin(), order.end(), minYIdx) == order.end()) order.push_back(minYIdx);
+
+    // 만약 중복이 있어 4개가 안 되면, 남은 인덱스를 추가
+    for (int i = 0; i < 4; ++i) {
+        if (std::find(order.begin(), order.end(), i) == order.end()) order.push_back(i);
+    }
+
+    // order: [첫 픽셀, x차 최소, x+y합 최대, y차 최소] 순서의 인덱스
+    
+    // 3. 삼각형 좌표계 (cm 단위)
+    // origin: (0,0,0)
+    // point_x: (4,0,0)
+    // point_y: (2, 2*sqrt(3), 0)
+    struct TriCoord { float x, y, z; };
+    std::vector<TriCoord> triangleCoords;
+    triangleCoords.push_back({0.0f, 4.0f, 0.0f});
+    triangleCoords.push_back({0.0f, 0.0f,  0.0f});
+    triangleCoords.push_back({4.0f, 0.0f,  0.0f});
+    triangleCoords.push_back({4.0f, 4.0f,  0.0f});
+    
+    std::vector<cv::Point3f> measuredPts;
+    
+    cv::Matx33f K(
+        intrinsicsArray[0], intrinsicsArray[3], intrinsicsArray[6],
+        intrinsicsArray[1], intrinsicsArray[4], intrinsicsArray[7],
+        intrinsicsArray[2], intrinsicsArray[5], intrinsicsArray[8]
+    );
+    float fx = K(0,0), fy = K(1,1), cx = K(0,2), cy = K(1,2);
+    
+    cv::Matx44f cameraPose_world(
+        cameraMatrix[0], cameraMatrix[4], cameraMatrix[8],  cameraMatrix[12],
+        cameraMatrix[1], cameraMatrix[5], cameraMatrix[9],  cameraMatrix[13],
+        cameraMatrix[2], cameraMatrix[6], cameraMatrix[10], cameraMatrix[14],
+        cameraMatrix[3], cameraMatrix[7], cameraMatrix[11], cameraMatrix[15]
+    );
+    // (2, -15, 0)의 오프셋 (단위: 카메라 좌표계, cm라면 변환 필요)
+
+    cv::Mat lidarPos_world = (cv::Mat_<double>(3,1) <<
+            lidarWorldArray[0], lidarWorldArray[1], lidarWorldArray[2]);
+    for (int i = 0; i < maxCircles; i++) {
+        int idx = order[i];
+        float u = points2DDepth[idx].x;
+        float v = points2DDepth[idx].y;
+//        float Z = points2DDepth[idx].depth;
+        
+        float denominator = sqrt( pow((u - cx)/fx, 2) + pow((v - cy)/fy, 2) + 1 );
+        float Z = points2DDepth[idx].depth / denominator;
+
+        float X = - (v - cy) / fy * Z;        // X: 부호 그대로
+        float Y = (u - cx) / fx * Z;
+        measuredPts.push_back(cv::Point3f(X, Y, Z));
+    }
+    
+    std::vector<cv::Point3f> triPts = {
+        {0.0f, 4.0f, 0.0f},
+        {0.0f, 0.0f, 0.0f},
+        {4.0f, 0.0f, 0.0f},
+        {4.0f, 4.0f, 0.0f}
+    };
+    cv::Mat offset_cam = (cv::Mat_<float>(4,1) << 0.02f, -0.15f, 0.0f, 1.0f);
+    // 카메라 pose를 float로 사용 중이므로, Matx44f → Mat 변환
+    cv::Mat offset_world = cv::Mat(cameraPose_world) * offset_cam; // 4x1
+    
+    std::vector<cv::Point3f> measuredPts_world;
+    for (int i = 0; i < maxCircles; ++i) {
+        // pt_cam을 float로 생성
+        cv::Mat pt_cam = (cv::Mat_<float>(4,1) << measuredPts[i].x, measuredPts[i].y, measuredPts[i].z, 1.0f);
+        // cameraPose_world가 cv::Matx44f라면 Mat으로 변환해서 곱셈
+        cv::Mat pt_world = cv::Mat(cameraPose_world) * pt_cam; // 4x1
+        measuredPts_world.push_back(cv::Point3f(
+            pt_world.at<float>(0,0),
+            pt_world.at<float>(1,0),
+            pt_world.at<float>(2,0)
+        ));
+    }
+
+    cv::Mat R, t;
+    rigid_transform_3D(triPts, measuredPts_world, R, t);
+    
+    cv::Mat R_inv = R.t();
+    cv::Mat t_inv = -R_inv * t;
+    cv::Mat cameraPos_world = (cv::Mat_<double>(3,1) <<
+        cameraPose_world(0,3), cameraPose_world(1,3), cameraPose_world(2,3));
+    cv::Mat cameraPos_tri = R_inv * (cameraPos_world - t);
+    cv::Mat lidarPos_tri = R_inv * (lidarPos_world - t);
+    cv::Mat offsetPos_world =(cv::Mat_<double>(3,1) <<
+      offset_world.at<double>(0), offset_world.at<double>(1), offset_world.at<double>(2));
+    cv::Mat offset_tri = R_inv * (offsetPos_world - t);
+
+//    horn_rigid_transform_3D(triPts,measuredPts,R,t);
+//    horn_rigid_transform_3D(triPts,measuredPts,R,t);
+    cv::Mat R_cam_world = (cv::Mat_<double>(3,3) <<
+        cameraPose_world(0,0), cameraPose_world(0,1), cameraPose_world(0,2),
+        cameraPose_world(1,0), cameraPose_world(1,1), cameraPose_world(1,2),
+        cameraPose_world(2,0), cameraPose_world(2,1), cameraPose_world(2,2)
+    );
+    cv::Mat R_cam_tri = R_inv * R_cam_world; // 3x3
+    cv::Mat normal_tri = R_cam_tri.col(2); // 3x1
+    cv::Mat R_tri_cam = R_cam_tri.t();
+    cv::Quatd quat = cv::Quatd::createFromRotMat(R_tri_cam);
+    double A = normal_tri.at<double>(0);
+    double B = normal_tri.at<double>(1);
+    double C = normal_tri.at<double>(2);
+    double x0 = cameraPos_tri.at<double>(0);
+    double y0 = cameraPos_tri.at<double>(1);
+    double z0 = cameraPos_tri.at<double>(2);
+    double D = -(A * x0 + B * y0 + C * z0);
+//    cv::Point3f camPos_tri(
+//        cameraPose_tri(0,3),
+//        cameraPose_tri(1,3),
+//        cameraPose_tri(2,3)
+//    );
+//    cv::Vec3f normal_tri(
+//        cameraPose_tri(0,2),
+//        cameraPose_tri(1,2),
+//        cameraPose_tri(2,2)
+//    );
+    
+
+    for (int i = 0; i < maxCircles; i++) {
+        int idx = order[i];
+        NSDictionary *dict = @{
+            @"pixel_x": @(points2DDepth[idx].x),
+            @"pixel_y": @(points2DDepth[idx].y),
+            @"radius": @(points2DDepth[idx].radius),
+            @"depth": @(points2DDepth[idx].depth),
+            @"triangle_x": @(triangleCoords[i].x),
+            @"triangle_y": @(triangleCoords[i].y),
+            @"triangle_z": @(triangleCoords[i].z),
+            @"lidar_x": @(t.at<double>(0)),
+            @"lidar_y": @(t.at<double>(1)),
+            @"lidar_z": @(t.at<double>(2)),
+            @"camera_a": @(A),
+            @"camera_b": @(B),
+            @"camera_c": @(C),
+            @"camera_d": @(D),
+            @"camera_x": @(x0),
+            @"camera_y": @(y0),
+            @"camera_z": @(z0),
+            @"quat_w": @(quat.w),
+            @"quat_x": @(quat.x),
+            @"quat_y": @(quat.y),
+            @"quat_z": @(quat.z)
+        };
+        [result addObject:dict];
+        printf("Point %d: pixel (%.2f, %.2f), radius: %f, depth %.3f m, triangle (%.2f, %.2f, %.3f) cm\n",
+               i+1,
+               points2DDepth[idx].x,
+               points2DDepth[idx].y,
+               points2DDepth[idx].radius,
+               points2DDepth[idx].depth,
+               triangleCoords[i].x,
+               triangleCoords[i].y,
+               triangleCoords[i].z);
+    }
+    
+    return result;
+}
+
+//+ (NSArray<NSDictionary *> *)detectHexRedCirclesInPixelBuffer:
+//(CVPixelBufferRef)pixelBuffer
+//                                               depthBuffer:
+//(CVPixelBufferRef)depthBuffer
+//                                           intrinsicsArray:
+//(const float *)intrinsicsArray
+//                                              cameraMatrix:
+//(const float *)cameraMatrix
+//                                           lidarWorldArray:
+//(const float *)lidarWorldArray
+//{
+//    CVPixelBufferLockBaseAddress(pixelBuffer, 0);
+//    
+//    size_t rgbWidth = CVPixelBufferGetWidth(pixelBuffer);
+//    size_t rgbHeight = CVPixelBufferGetHeight(pixelBuffer);
+//    
+//    printf("width: %zu", rgbWidth);
+//    printf("height: %zu", rgbHeight);
+//    
+//    uint8_t *yPlane = (uint8_t *)CVPixelBufferGetBaseAddressOfPlane(pixelBuffer, 0);
+//    uint8_t *uvPlane = (uint8_t *)CVPixelBufferGetBaseAddressOfPlane(pixelBuffer, 1);
+//    
+//    size_t yPitch = CVPixelBufferGetBytesPerRowOfPlane(pixelBuffer, 0);
+//    size_t uvPitch = CVPixelBufferGetBytesPerRowOfPlane(pixelBuffer, 1);
+//    
+//    cv::Mat yMat((int)rgbHeight, (int)rgbWidth, CV_8UC1, yPlane, yPitch);
+//    cv::Mat uvMat((int)rgbHeight/2, (int)rgbWidth/2, CV_8UC2, uvPlane, uvPitch);
+//    
+//    cv::Mat yuvMat((int)(rgbHeight * 3 / 2), (int)rgbWidth, CV_8UC1);
+//    memcpy(yuvMat.data, yMat.data, rgbWidth * rgbHeight);
+//    memcpy(yuvMat.data + rgbWidth * rgbHeight, uvMat.data, rgbWidth * rgbHeight / 2);
+//    
+//    cv::Mat bgrMat;
+//    cv::cvtColor(yuvMat, bgrMat, cv::COLOR_YUV2BGR_NV12);
+//    
+//    CVPixelBufferUnlockBaseAddress(pixelBuffer, 0);
+//    
+//    cv::Mat hsvMat;
+//    cv::cvtColor(bgrMat, hsvMat, cv::COLOR_BGR2HSV);
+//    
+//    cv::Mat lowerRedMask, upperRedMask, redMask;
+//    cv::inRange(hsvMat, cv::Scalar(0, 150, 120), cv::Scalar(10, 255, 255), lowerRedMask);
+//    cv::inRange(hsvMat, cv::Scalar(160, 150, 120), cv::Scalar(179, 255, 255), upperRedMask);
+//    cv::addWeighted(lowerRedMask, 1.0, upperRedMask, 1.0, 0.0, redMask);
+//    
+//    cv::GaussianBlur(redMask, redMask, cv::Size(9, 9), 2, 2);
+//    
+//    std::vector<cv::Vec3f> circles;
+////    cv::HoughCircles(redMask, circles, cv::HOUGH_GRADIENT, 1, redMask.rows/8, 100, 30, 0, 0);
+//    cv::HoughCircles(redMask, circles, cv::HOUGH_GRADIENT, 1, redMask.rows/8, 100, 20, 0, 0);
+//
+//    
+//    CVPixelBufferLockBaseAddress(depthBuffer, kCVPixelBufferLock_ReadOnly);
+//    float *depthBase = (float *)CVPixelBufferGetBaseAddress(depthBuffer);
+//    int depthBytesPerRow = CVPixelBufferGetBytesPerRow(depthBuffer) / sizeof(float);
+//    size_t depthWidth = CVPixelBufferGetWidth(depthBuffer);
+//    size_t depthHeight = CVPixelBufferGetHeight(depthBuffer);
+//    cv::Mat depthMat(depthHeight, depthWidth, CV_32FC1, depthBase, depthBytesPerRow * sizeof(float));
+//    CVPixelBufferUnlockBaseAddress(depthBuffer, kCVPixelBufferLock_ReadOnly);
+//    
+//    NSMutableArray<NSDictionary *> *result = [NSMutableArray array];
+//    int maxCircles = (int)std::min(6, (int)circles.size());
+//    if (maxCircles < 6) {
+//        printf("Less than 6 circles detected.\n");
+//        for (int i = 0; i < maxCircles; i++) {
+//            
+//            NSDictionary *dict = @{
+//                @"pixel_x": @(0.0f),
+//                @"pixel_y": @(0.0f),
+//                @"radius": @(0.0f),
+//                @"depth": @(0.0f),
+//                @"triangle_x": @(0.0f),
+//                @"triangle_y": @(0.0f),
+//                @"triangle_z": @(0.0f),
+//                @"lidar_x": @(0.0f),
+//                @"lidar_y": @(0.0f),
+//                @"lidar_z": @(0.0f),
+//                @"camera_a": @(0.0f),
+//                @"camera_b": @(0.0f),
+//                @"camera_c": @(0.0f),
+//                @"camera_d": @(0.0f),
+//                @"camera_x": @(0.0f),
+//                @"camera_y": @(0.0f),
+//                @"camera_z": @(0.0f)
+//            };
+//            [result addObject:dict];
+//            printf("Less than 6 circles");
+//        }
+//        return result;
+//    }
+//    
+//    // 1. 원들의 x,y 좌표와 depth 저장
+//    struct CircleInfo {
+//        float x, y, radius, depth;
+//    };
+//    std::vector<CircleInfo> points2DDepth;
+//    for (int i = 0; i < maxCircles; i++) {
+//        float x = circles[i][0];
+//        float y = circles[i][1];
+//        float radius = circles[i][2];
+//        
+//        int dx = (int)round(x * ((float)depthWidth / rgbWidth));
+//        int dy = (int)round(y * ((float)depthHeight / rgbHeight));
+//        
+//        float depth = 0.0f;
+//        if (dx >= 0 && dx < depthWidth && dy >= 0 && dy < depthHeight) {
+//            depth = depthMat.at<float>(dy, dx);
+//        }
+//        
+//        points2DDepth.push_back({x, y, radius, depth * 100.0f});
+//    }
+//    
+//    // points2DDepth: 6개의 cv::Point2f (또는 x, y 멤버가 있는 구조체)
+//    std::vector<int> order;
+//
+//    // 1. 첫 번째 점: y값이 가장 작은 점
+//    int firstIdx = 0;
+//    float minY = points2DDepth[0].y;
+//    for (int i = 1; i < 6; ++i) {
+//        if (points2DDepth[i].y < minY) {
+//            minY = points2DDepth[i].y;
+//            firstIdx = i;
+//        }
+//    }
+//    order.push_back(firstIdx);
+//
+//    // 2. 두 번째 점: 첫 번째 점과 y값 차이가 가장 적고, x값이 첫 번째 점보다 작은 점
+//    int secondIdx = -1;
+//    float minYDiff = std::numeric_limits<float>::max();
+//    for (int i = 0; i < 6; ++i) {
+//        if (i == firstIdx) continue;
+//        float yDiff = std::abs(points2DDepth[i].y - points2DDepth[firstIdx].y);
+//        if (points2DDepth[i].x < points2DDepth[firstIdx].x && yDiff < minYDiff) {
+//            minYDiff = yDiff;
+//            secondIdx = i;
+//        }
+//    }
+//    // 만약 조건을 만족하는 점이 없으면, y값 차이가 가장 적은 점을 선택
+//    if (secondIdx == -1) {
+//        minYDiff = std::numeric_limits<float>::max();
+//        for (int i = 0; i < 6; ++i) {
+//            if (i == firstIdx) continue;
+//            float yDiff = std::abs(points2DDepth[i].y - points2DDepth[firstIdx].y);
+//            if (yDiff < minYDiff) {
+//                minYDiff = yDiff;
+//                secondIdx = i;
+//            }
+//        }
+//    }
+//    order.push_back(secondIdx);
+//
+//    // 3. 세 번째 점: 두 번째 점과 x값 차이가 가장 적은 점
+//    int thirdIdx = -1;
+//    float minXDiff = std::numeric_limits<float>::max();
+//    for (int i = 0; i < 6; ++i) {
+//        if (i == firstIdx || i == secondIdx) continue;
+//        float xDiff = std::abs(points2DDepth[i].x - points2DDepth[secondIdx].x);
+//        if (xDiff < minXDiff) {
+//            minXDiff = xDiff;
+//            thirdIdx = i;
+//        }
+//    }
+//    order.push_back(thirdIdx);
+//
+//    // 4. 네 번째 점: 첫 번째 점과 x값 차이가 가장 적은 점
+//    int fourthIdx = -1;
+//    minXDiff = std::numeric_limits<float>::max();
+//    for (int i = 0; i < 6; ++i) {
+//        if (i == firstIdx || i == secondIdx || i == thirdIdx) continue;
+//        float xDiff = std::abs(points2DDepth[i].x - points2DDepth[firstIdx].x);
+//        if (xDiff < minXDiff) {
+//            minXDiff = xDiff;
+//            fourthIdx = i;
+//        }
+//    }
+//    order.push_back(fourthIdx);
+//
+//    // 5. 다섯 번째 점: 세 번째 점과 y값 차이가 가장 적은 점
+//    int fifthIdx = -1;
+//    minYDiff = std::numeric_limits<float>::max();
+//    for (int i = 0; i < 6; ++i) {
+//        if (i == firstIdx || i == secondIdx || i == thirdIdx || i == fourthIdx) continue;
+//        float yDiff = std::abs(points2DDepth[i].y - points2DDepth[thirdIdx].y);
+//        if (yDiff < minYDiff) {
+//            minYDiff = yDiff;
+//            fifthIdx = i;
+//        }
+//    }
+//    order.push_back(fifthIdx);
+//
+//    // 6. 여섯 번째 점: 다섯 번째 점과 x값 차이가 가장 적은 점
+//    int sixthIdx = -1;
+//    minXDiff = std::numeric_limits<float>::max();
+//    for (int i = 0; i < 6; ++i) {
+//        if (i == firstIdx || i == secondIdx || i == thirdIdx || i == fourthIdx || i == fifthIdx) continue;
+//        float xDiff = std::abs(points2DDepth[i].x - points2DDepth[fifthIdx].x);
+//        if (xDiff < minXDiff) {
+//            minXDiff = xDiff;
+//            sixthIdx = i;
+//        }
+//    }
+//    order.push_back(sixthIdx);
+//    // 3. 삼각형 좌표계 (cm 단위)
+//    // origin: (0,0,0)
+//    // point_x: (4,0,0)
+//    // point_y: (2, 2*sqrt(3), 0)
+//    struct TriCoord { float x, y, z; };
+//    std::vector<TriCoord> triangleCoords;
+//    triangleCoords.push_back({4.5f, 1.5f*std::sqrt(3.0f), 0.0f});
+//    triangleCoords.push_back({3.0f, 3.0f*std::sqrt(3.0f),  0.0f});
+//    triangleCoords.push_back({0.0f, 3.0f*std::sqrt(3.0f),  0.0f});
+//    triangleCoords.push_back({-1.5f, 1.5f*std::sqrt(3.0f),  0.0f});
+//    triangleCoords.push_back({0.0f, 0.0f,  0.0f});
+//    triangleCoords.push_back({3.0f, 0.0f,  0.0f});
+//    
+//    std::vector<cv::Point3f> measuredPts;
+//    
+//    cv::Matx33f K(
+//        intrinsicsArray[0], intrinsicsArray[3], intrinsicsArray[6],
+//        intrinsicsArray[1], intrinsicsArray[4], intrinsicsArray[7],
+//        intrinsicsArray[2], intrinsicsArray[5], intrinsicsArray[8]
+//    );
+//    float fx = K(0,0), fy = K(1,1), cx = K(0,2), cy = K(1,2);
+//    
+//    cv::Matx44f cameraPose_world(
+//        cameraMatrix[0], cameraMatrix[4], cameraMatrix[8],  cameraMatrix[12],
+//        cameraMatrix[1], cameraMatrix[5], cameraMatrix[9],  cameraMatrix[13],
+//        cameraMatrix[2], cameraMatrix[6], cameraMatrix[10], cameraMatrix[14],
+//        cameraMatrix[3], cameraMatrix[7], cameraMatrix[11], cameraMatrix[15]
+//    );
+//    // (2, -15, 0)의 오프셋 (단위: 카메라 좌표계, cm라면 변환 필요)
+//
+//    cv::Mat lidarPos_world = (cv::Mat_<double>(3,1) <<
+//            lidarWorldArray[0], lidarWorldArray[1], lidarWorldArray[2]);
+//    for (int i = 0; i < maxCircles; i++) {
+//        int idx = order[i];
+//        float u = points2DDepth[idx].x;
+//        float v = points2DDepth[idx].y;
+////        float Z = points2DDepth[idx].depth;
+//        
+//        float denominator = sqrt( pow((u - cx)/fx, 2) + pow((v - cy)/fy, 2) + 1 );
+//        float Z = points2DDepth[idx].depth / denominator;
+//
+//        float X = - (v - cy) / fy * Z;        // X: 부호 그대로
+//        float Y = (u - cx) / fx * Z;
+//        measuredPts.push_back(cv::Point3f(X, Y, Z));
+//    }
+//
+//    std::vector<cv::Point3f> triPts = {
+//        {4.5f, 1.5f*std::sqrt(3.0f), 0.0f},
+//        {3.0f, 3.0f*std::sqrt(3.0f),  0.0f},
+//        {0.0f, 3.0f*std::sqrt(3.0f),  0.0f},
+//        {-1.5f, 1.5f*std::sqrt(3.0f),  0.0f},
+//        {0.0f, 0.0f,  0.0f},
+//        {3.0f, 0.0f,  0.0f}
+//    };
+//    cv::Mat offset_cam = (cv::Mat_<float>(4,1) << 0.02f, -0.15f, 0.0f, 1.0f);
+//    // 카메라 pose를 float로 사용 중이므로, Matx44f → Mat 변환
+//    cv::Mat offset_world = cv::Mat(cameraPose_world) * offset_cam; // 4x1
+//    
+//    std::vector<cv::Point3f> measuredPts_world;
+//    for (int i = 0; i < maxCircles; ++i) {
+//        // pt_cam을 float로 생성
+//        cv::Mat pt_cam = (cv::Mat_<float>(4,1) << measuredPts[i].x, measuredPts[i].y, measuredPts[i].z, 1.0f);
+//        // cameraPose_world가 cv::Matx44f라면 Mat으로 변환해서 곱셈
+//        cv::Mat pt_world = cv::Mat(cameraPose_world) * pt_cam; // 4x1
+//        measuredPts_world.push_back(cv::Point3f(
+//            pt_world.at<float>(0,0),
+//            pt_world.at<float>(1,0),
+//            pt_world.at<float>(2,0)
+//        ));
+//    }
+//
+//    cv::Mat R, t;
+//    rigid_transform_3D(triPts, measuredPts_world, R, t);
+//    
+//    cv::Mat R_inv = R.t();
+//    cv::Mat t_inv = -R_inv * t;
+//    cv::Mat cameraPos_world = (cv::Mat_<double>(3,1) <<
+//        cameraPose_world(0,3), cameraPose_world(1,3), cameraPose_world(2,3));
+//    cv::Mat cameraPos_tri = R_inv * (cameraPos_world - t);
+//    cv::Mat lidarPos_tri = R_inv * (lidarPos_world - t);
+//    cv::Mat offsetPos_world =(cv::Mat_<double>(3,1) <<
+//      offset_world.at<double>(0), offset_world.at<double>(1), offset_world.at<double>(2));
+//    cv::Mat offset_tri = R_inv * (offsetPos_world - t);
+//
+//    cv::Mat R_cam_world = (cv::Mat_<double>(3,3) <<
+//        cameraPose_world(0,0), cameraPose_world(0,1), cameraPose_world(0,2),
+//        cameraPose_world(1,0), cameraPose_world(1,1), cameraPose_world(1,2),
+//        cameraPose_world(2,0), cameraPose_world(2,1), cameraPose_world(2,2)
+//    );
+//    cv::Mat R_cam_tri = R_inv * R_cam_world; // 3x3
+//    cv::Mat normal_tri = R_cam_tri.col(2); // 3x1
+//    cv::Mat R_tri_cam = R_cam_tri.t();
+//    cv::Quatd quat = cv::Quatd::createFromRotMat(R_tri_cam);
+//
+//    double A = normal_tri.at<double>(0);
+//    double B = normal_tri.at<double>(1);
+//    double C = normal_tri.at<double>(2);
+//    double x0 = cameraPos_tri.at<double>(0);
+//    double y0 = cameraPos_tri.at<double>(1);
+//    double z0 = cameraPos_tri.at<double>(2);
+//    double D = -(A * x0 + B * y0 + C * z0);
+//
+//    for (int i = 0; i < maxCircles; i++) {
+//        int idx = order[i];
+//        NSDictionary *dict = @{
+//            @"pixel_x": @(points2DDepth[idx].x),
+//            @"pixel_y": @(points2DDepth[idx].y),
+//            @"radius": @(points2DDepth[idx].radius),
+//            @"depth": @(points2DDepth[idx].depth),
+//            @"triangle_x": @(triangleCoords[i].x),
+//            @"triangle_y": @(triangleCoords[i].y),
+//            @"triangle_z": @(triangleCoords[i].z),
+//            @"lidar_x": @(t.at<double>(0)),
+//            @"lidar_y": @(t.at<double>(1)),
+//            @"lidar_z": @(t.at<double>(2)),
+//            @"camera_a": @(A),
+//            @"camera_b": @(B),
+//            @"camera_c": @(C),
+//            @"camera_d": @(D),
+//            @"camera_x": @(x0),
+//            @"camera_y": @(y0),
+//            @"camera_z": @(z0),
+//            @"quat_w": @(quat.w),
+//            @"quat_x": @(quat.x),
+//            @"quat_y": @(quat.y),
+//            @"quat_z": @(quat.z)
+//        };
+//        [result addObject:dict];
+//        printf("Point %d: pixel (%.2f, %.2f), radius: %f, depth %.3f m, triangle (%.2f, %.2f, %.3f) cm\n",
+//               i+1,
+//               points2DDepth[idx].x,
+//               points2DDepth[idx].y,
+//               points2DDepth[idx].radius,
+//               points2DDepth[idx].depth,
+//               triangleCoords[i].x,
+//               triangleCoords[i].y,
+//               triangleCoords[i].z);
+//    }
+//    
+//    return result;
+//}
+
+
 
 void rigid_transform_3D(const std::vector<cv::Point3f>& src, const std::vector<cv::Point3f>& dst, cv::Mat& R, cv::Mat& t) {
     CV_Assert(src.size() == dst.size());

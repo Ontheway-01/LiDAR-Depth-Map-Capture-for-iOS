@@ -27,7 +27,31 @@ NS_ASSUME_NONNULL_BEGIN
 (const float *)intrinsics
 ;
 
-+ (NSArray<NSDictionary *> *)detectRedCirclesInPixelBuffer:
++ (NSArray<NSDictionary *> *)detectTriangleRedCirclesInPixelBuffer:
+(CVPixelBufferRef)pixelBuffer
+                                               depthBuffer:
+(CVPixelBufferRef)depthBuffer
+                                           intrinsicsArray:
+(const float *)intrinsicsArray
+                                              cameraMatrix:
+(const float *)cameraMatrix
+                                           lidarWorldArray:
+(const float *)lidarWorldArray
+;
+
++ (NSArray<NSDictionary *> *)detectRectangleRedCirclesInPixelBuffer:
+(CVPixelBufferRef)pixelBuffer
+                                               depthBuffer:
+(CVPixelBufferRef)depthBuffer
+                                           intrinsicsArray:
+(const float *)intrinsicsArray
+                                              cameraMatrix:
+(const float *)cameraMatrix
+                                           lidarWorldArray:
+(const float *)lidarWorldArray
+;
+
++ (NSArray<NSDictionary *> *)detectHexRedCirclesInPixelBuffer:
 (CVPixelBufferRef)pixelBuffer
                                                depthBuffer:
 (CVPixelBufferRef)depthBuffer

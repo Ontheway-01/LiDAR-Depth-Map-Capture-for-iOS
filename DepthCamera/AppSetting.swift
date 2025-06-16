@@ -13,7 +13,7 @@ class AppSettings: ObservableObject {
     @Published var captureCount: Int = 0 // 버튼 누른 횟수
 
     enum Mode: String, CaseIterable, Identifiable {
-        case three, fourOne, fourColors, six
+        case no, three, four, fourOne, fourColors, six
         var id: String { self.rawValue }
     }
 }

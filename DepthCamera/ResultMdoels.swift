@@ -16,6 +16,13 @@ struct DetectionModels{
         let triangleZ: Double
     }
 
+    struct Quaternion  {
+        let quatW: Double
+        let quatX: Double
+        let quatY: Double
+        let quatZ: Double
+    }
+
     struct LidarData {
         let lidarX: Double
         let lidarY: Double
