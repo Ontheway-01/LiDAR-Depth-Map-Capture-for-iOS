@@ -11,9 +11,9 @@ struct DetectionModels{
         let pixelY: Double
         let radius: Double
         let depth: Double
-        let triangleX: Double
-        let triangleY: Double
-        let triangleZ: Double
+//        let triangleX: Double
+//        let triangleY: Double
+//        let triangleZ: Double
     }
 
     struct Quaternion  {

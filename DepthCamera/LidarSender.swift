@@ -38,6 +38,36 @@ class LidarSender {
             }
         })
     }
+    func sendPoseUDP(anchorPos: SIMD3<Float>, anchorOri: simd_quatf,
+                     cameraPos: SIMD3<Float>, cameraOri: simd_quatf) {
+        // 예시: CSV 포맷으로 변환
+        let msg = String(format: "anchor,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f;camera,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f",
+            anchorPos.x, anchorPos.y, anchorPos.z, anchorOri.vector.x, anchorOri.vector.y, anchorOri.vector.z, anchorOri.vector.w,
+            cameraPos.x, cameraPos.y, cameraPos.z, cameraOri.vector.x, cameraOri.vector.y, cameraOri.vector.z, cameraOri.vector.w
+        )
+        print("msgggggggg: \(msg)")
+        let data = msg.data(using: .utf8)!
+        connection.send(content: data, completion: .contentProcessed({ error in
+            if let error = error {
+                print("UDP send error: \(error)")
+            }
+        }))
+    }
+    func sendAnchorCoordCameraPose(shape: String, cameraPos: SIMD3<Float>, cameraOri: simd_quatf) {
+        // 예시: CSV 포맷으로 변환
+        let msg = String(format: "shape:\(shape);cam_in_anchor:%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f",
+             cameraPos.x, cameraPos.y, cameraPos.z,
+             cameraOri.vector.x, cameraOri.vector.y, cameraOri.vector.z, cameraOri.vector.w
+        )
+        print("msgggggggg: \(msg)")
+        let data = msg.data(using: .utf8)!
+        connection.send(content: data, completion: .contentProcessed({ error in
+            if let error = error {
+                print("UDP send error: \(error)")
+            }
+        }))
+    }
+    
     func sendPlaneEquation(a: Double, b: Double, c: Double, d: Double) {
        let msg = String(format: "plane:%.6f,%.6f,%.6f,%.6f\n", a, b, c, d)
        guard let data = msg.data(using: .utf8) else {

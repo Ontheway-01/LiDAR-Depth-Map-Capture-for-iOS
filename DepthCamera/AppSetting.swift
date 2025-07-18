@@ -11,7 +11,7 @@ import Combine
 class AppSettings: ObservableObject {
     @Published var mode: Mode = .three
     @Published var captureCount: Int = 0 // 버튼 누른 횟수
-
+    
     enum Mode: String, CaseIterable, Identifiable {
         case no, three, four, fourOne, fourColors, six
         var id: String { self.rawValue }

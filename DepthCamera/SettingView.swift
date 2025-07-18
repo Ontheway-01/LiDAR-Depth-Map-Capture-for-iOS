@@ -21,6 +21,9 @@ struct SettingView: View {
                             }
                         }
                         .pickerStyle(SegmentedPickerStyle())
+                        .onChange(of: settings.mode) { _ in
+                            settings.captureCount = 0
+                        }
                     }
                     Section(header: Text("캡처 카운트")) {
                         HStack {
