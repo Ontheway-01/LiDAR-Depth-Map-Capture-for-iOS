@@ -9,9 +9,7 @@ import ARKit
 import SwiftUI
 
 class ARViewModel: NSObject, ARSessionDelegate, ObservableObject {
-//    let lidarSender = LidarSender(host: "192.168.1.216", port: 5005)
-    let lidarSender = LidarSender(host: "192.168.0.57", port: 5005)
-//    let lidarSender = LidarSender(host: "192.168.0.8", port: 5005)
+    let lidarSender = LidarSender(host: "192.168.0.52", port: 5005)
     private var latestDepthMap: CVPixelBuffer?
     private var latestImage: CVPixelBuffer?
     private var latestCameraIntrinsics: simd_float3x3?
@@ -27,10 +25,6 @@ class ARViewModel: NSObject, ARSessionDelegate, ObservableObject {
     private var cameraPosition: DetectionModels.CameraPosition = DetectionModels.CameraPosition(x: 0.0, y: 0.0, z: 0.0)
     private var quaternion: DetectionModels.Quaternion = DetectionModels.Quaternion(quatW: 0.0, quatX: 0.0, quatY: 0.0, quatZ: 0.0)
 
-//    private var anchorPos: SIMD3<Float> = SIMD3<Float>(0.0,0.0,0.0)
-//    private var cameraPos: SIMD3<Float> = SIMD3<Float>(0.0,0.0,0.0)
-//    private var cameraPose: simd_quatf = simd_quatf(vector: SIMD4<Float>(0.0,0.0,0.0,0.0))
-//    private var anchorPose: simd_quatf = simd_quatf(vector: SIMD4<Float>(0.0,0.0,0.0,0.0))
     private var camera_world_pose: simd_float4x4 = simd_float4x4()
     private var camera_tri_pos: SIMD3<Float> = SIMD3<Float>(0.0,0.0,0.0)
     private var camera_tri_ori: simd_quatf = simd_quatf(vector: SIMD4<Float>(0.0,0.0,0.0,0.0))
@@ -72,7 +66,6 @@ class ARViewModel: NSObject, ARSessionDelegate, ObservableObject {
 
     
     func session(_ arsession: ARSession, didUpdate frame: ARFrame) {
-//        print("count::::::: \(self.appSettings?.captureCount)")
         let currentTimestamp = frame.timestamp
         if currentTimestamp - lastProcessedTimestamp < minInterval {
             return // 샘플링 간격보다 빠르면 처리하지 않음
@@ -86,8 +79,6 @@ class ARViewModel: NSObject, ARSessionDelegate, ObservableObject {
         let height = CVPixelBufferGetHeight(pixelBuffer)
 
         latestCameraIntrinsics = frame.camera.intrinsics
-        
-//        print("RGB: \(latestCameraIntrinsics)")
         
         let cameraPose_world: simd_float4x4 = frame.camera.transform
         camera_world_pose = cameraPose_world
@@ -135,7 +126,6 @@ class ARViewModel: NSObject, ARSessionDelegate, ObservableObject {
             var results:[[String: Any]]?
             if (self.appSettings?.mode == .three){
                 results = OpenCVWrapper.detectTriangleRedCircles(in: pixelBuffer, depthBuffer: depthMap, intrinsicsArray: intrinsicsArray, cameraMatrix: cameraMatrix, lidarWorldArray: lidarWorldArray) as? [[String: Any]]
-//                print("result:: \(results)")
             }
             else if (self.appSettings?.mode == .four){
                 results = OpenCVWrapper.detectRectangleRedCircles(in: pixelBuffer, depthBuffer: depthMap, intrinsicsArray: intrinsicsArray, cameraMatrix: cameraMatrix, lidarWorldArray: lidarWorldArray) as? [[String: Any]]
@@ -184,10 +174,6 @@ class ARViewModel: NSObject, ARSessionDelegate, ObservableObject {
                     quat = DetectionModels.Quaternion(quatW: qw.doubleValue, quatX: qx.doubleValue, quatY: qy.doubleValue, quatZ: qz.doubleValue)
                     let rotationFloats = rotationArray.map { $0.doubleValue }
                     let translationFloats = translationArray.map { $0.doubleValue }
-//                    print("rotation floatts: \(rotationFloats)")
-//                    print("calculate anchorr: \(translationFloats)")
-                    
-//                    print("anchor settingggggg!!!!!!!!!!!!")
                     
                     // simd_float4x4로 변환
                     
@@ -196,9 +182,8 @@ class ARViewModel: NSObject, ARSessionDelegate, ObservableObject {
                         SIMD3<Float>(Float(rotationArray[3]), Float(rotationArray[4]), Float(rotationArray[5])),
                         SIMD3<Float>(Float(rotationArray[6]), Float(rotationArray[7]), Float(rotationArray[8]))
                     ])
-//                    print("RRRR:: \(R)")
+
                     let t = SIMD3<Float>(Float(translationArray[0]), Float(translationArray[1]), Float(translationArray[2]))
-//                    print("anchor translationnnn:: \(translationFloats)")
 
                     // 4x4 변환행렬 생성
                     var transform = matrix_identity_float4x4
@@ -206,53 +191,15 @@ class ARViewModel: NSObject, ARSessionDelegate, ObservableObject {
                     transform.columns.1 = SIMD4<Float>(R.columns.1, 0)
                     transform.columns.2 = SIMD4<Float>(R.columns.2, 0)
                     transform.columns.3 = SIMD4<Float>(t, 1)
-//                    print(transform)
-//                    let cameraInAnchor = transform.inverse * self.camera_world_pose
-//                    camerapos = SIMD3<Float>(cameraInAnchor.columns.3.x,
-//                                                cameraInAnchor.columns.3.y,
-//                                                cameraInAnchor.columns.3.z)
-//                    cameraori = simd_quatf(cameraInAnchor)
+
                     if self.appSettings!.captureCount == 0{
                         for anchor in frame.anchors {
                             arsession.remove(anchor: anchor)
                         }
-//                        if self.appSettings?.mode == .three{
-//                            let anchor = ARAnchor(name: "three", transform: transform)
-//                            arsession.add(anchor: anchor)
-//                        }
-//                        if self.appSettings?.mode == .four{
-//                            print("anchor four")
-//                            let anchor = ARAnchor(name: "four", transform: transform)
-//                            arsession.add(anchor: anchor)
-//                        }
-//                        if self.appSettings?.mode == .six{
-//                            let anchor = ARAnchor(name: "six", transform: transform)
-//                            arsession.add(anchor: anchor)
-//                        }
                     }
                 }
             }
-//            else if self.appSettings?.mode == .no {
-//                camerapos = SIMD3<Float>(self.camera_world_pose.columns.3.x,
-//                                         self.camera_world_pose.columns.3.y,
-//                                         self.camera_world_pose.columns.3.z)
-//                cameraori = simd_quatf(self.camera_world_pose)
-//            }
-//            if self.appSettings!.captureCount >= 1 {
-//                if self.appSettings?.mode == .three {
-//                    for anchor in frame.anchors {
-//                        if anchor.name == "triangle" {
-//                            let transform = anchor.transform // simd_float4x4
-//                            let cameraInAnchor = transform.inverse * self.camera_world_pose
-//                            print("transformmm: \(transform) // camera transformm:: \(self.camera_world_pose)")
-//                            camerapos = SIMD3<Float>(cameraInAnchor.columns.3.x,
-//                                                        cameraInAnchor.columns.3.y,
-//                                                        cameraInAnchor.columns.3.z)
-//                            cameraori = simd_quatf(cameraInAnchor)
-//                        }
-//                    }
-//                }
-//            }
+            
             DispatchQueue.main.async {
                 self.detectedCircles = circles
                 self.lidarPosition = lidar
@@ -261,9 +208,6 @@ class ARViewModel: NSObject, ARSessionDelegate, ObservableObject {
                 self.quaternion = quat
                 self.camera_tri_pos = camerapos
                 self.camera_tri_ori = cameraori
-//                print("shapeee: \(self.shape)")
-//                self.sendCurrentLidarPosition()
-//                print("positionssss:: \(self.camera_tri_pos) // oriiii: \(self.camera_tri_ori)")
             }
         }
         
@@ -312,28 +256,8 @@ class ARViewModel: NSObject, ARSessionDelegate, ObservableObject {
         return cameraPosition + offsetCenter + offsetBottom
     }
 
-
-    // 4. 메인 업데이트 로직
-//    func updatePhonePosition() {
-//        guard let frame = session.currentFrame else { return }
-//        // 카메라 포즈 가져오기
-//        var cameraTransform = frame.camera.transform
-//        // 중력 보정 적용
-//        cameraTransform = applyGravityCorrection(
-//            transform: cameraTransform,
-//            gravity: frame.gravity
-//        )
-//        // 하단부 위치 계산
-//        let bottomPosition = calculatePhoneBottomPosition(
-//            cameraTransform: cameraTransform
-//        )
-//        print("하단부 위치: \(bottomPosition)")
-//    }
     
     func sendCurrentLidarPosition() {
-//        print("send!!!!!!!!!!!!!!!!!!!!!!!")
-//        self.lidarSender.sendAnchorCoordCameraPose(shape: shape, cameraPos: camera_tri_pos, cameraOri: camera_tri_ori)
-//        self.lidarSender.sendPoseUDP(anchorPos: self.anchorPos, anchorOri: self.anchorPose, cameraPos: self.cameraPos, cameraOri: self.cameraPose)
         if (self.appSettings?.mode == .three){
             self.lidarSender.sendType(type: "three")
         }
@@ -343,7 +267,6 @@ class ARViewModel: NSObject, ARSessionDelegate, ObservableObject {
         else if (self.appSettings?.mode == .six){
             self.lidarSender.sendType(type: "six")
         }
-//        self.lidarSender.sendLidarPosition(x: self.lidarPosition.lidarX, y: self.lidarPosition.lidarY, z: self.lidarPosition.lidarZ)
         self.lidarSender.sendNormalVector(nx: self.planeEquation.a, ny: self.planeEquation.b, nz: self.planeEquation.c)
         self.lidarSender.sendCamera(x: self.cameraPosition.x, y: self.cameraPosition.y, z: self.cameraPosition.z)
         self.lidarSender.sendQuatd(w: self.quaternion.quatW, x: self.quaternion.quatX, y: self.quaternion.quatY, z: self.quaternion.quatZ)

@@ -11,9 +11,6 @@ struct DetectionModels{
         let pixelY: Double
         let radius: Double
         let depth: Double
-//        let triangleX: Double
-//        let triangleY: Double
-//        let triangleZ: Double
     }
 
     struct Quaternion  {
@@ -65,11 +62,9 @@ struct DetectionModels{
 
 
     struct DetectionResult {
-    //    let cameraPosition: CameraPosition
         let lidarPosition: LidarPosition
         let normal: NormalVector
         let planeEquation: PlaneEquation
-    //    let rotationWorldToCamera: RotationMatrix
         let pixelCenters: [PixelCenter]
     }
     func parseDetectionResult(_ dict: [String: Any]) -> DetectionResult {

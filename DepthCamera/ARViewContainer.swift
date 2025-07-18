@@ -32,7 +32,6 @@ struct ARViewContainer: UIViewRepresentable {
         let arView = ARView(frame: .zero)
         
         let configuration = ARWorldTrackingConfiguration()
-//        configuration.worldAlignment = .camera
         
         if ARWorldTrackingConfiguration.supportsSceneReconstruction(.meshWithClassification) {
             configuration.sceneReconstruction = .meshWithClassification
@@ -67,7 +66,6 @@ struct ARViewContainer: UIViewRepresentable {
         uiView.layer.sublayers?.removeAll(where: { $0.name == "circleOverlay" })
         uiView.layer.sublayers?.removeAll(where: { $0.name == "textOverlay" })
 
-//        for (index, circle) in arViewModel.detectedCircles.enumerated() {
         for (index, circle) in arViewModel.detectedCircles.enumerated() {
             let textLayer = CATextLayer()
                 textLayer.name = "textOverlay"

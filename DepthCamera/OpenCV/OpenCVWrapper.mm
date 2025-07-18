@@ -142,10 +142,7 @@ cv::Mat eulerAnglesToRotationMatrix(double pitch, double roll, double yaw) {
     
     size_t rgbWidth = CVPixelBufferGetWidth(pixelBuffer);
     size_t rgbHeight = CVPixelBufferGetHeight(pixelBuffer);
-    
-//    printf("width: %zu", rgbWidth);
-//    printf("height: %zu", rgbHeight);
-    
+        
     uint8_t *yPlane = (uint8_t *)CVPixelBufferGetBaseAddressOfPlane(pixelBuffer, 0);
     uint8_t *uvPlane = (uint8_t *)CVPixelBufferGetBaseAddressOfPlane(pixelBuffer, 1);
     
@@ -175,7 +172,6 @@ cv::Mat eulerAnglesToRotationMatrix(double pitch, double roll, double yaw) {
     cv::GaussianBlur(redMask, redMask, cv::Size(9, 9), 2, 2);
     
     std::vector<cv::Vec3f> circles;
-//    cv::HoughCircles(redMask, circles, cv::HOUGH_GRADIENT, 1, redMask.rows/8, 100, 30, 0, 0);
     cv::HoughCircles(redMask, circles, cv::HOUGH_GRADIENT, 1, redMask.rows/8, 100, 20, 0, 0);
 
     
@@ -471,7 +467,6 @@ cv::Mat eulerAnglesToRotationMatrix(double pitch, double roll, double yaw) {
     cv::GaussianBlur(redMask, redMask, cv::Size(9, 9), 2, 2);
     
     std::vector<cv::Vec3f> circles;
-//    cv::HoughCircles(redMask, circles, cv::HOUGH_GRADIENT, 1, redMask.rows/8, 100, 30, 0, 0);
     cv::HoughCircles(redMask, circles, cv::HOUGH_GRADIENT, 1, redMask.rows/8, 100, 20, 0, 0);
 
     
